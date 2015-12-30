@@ -323,6 +323,7 @@ wxArrayString CMakePlugin::GetSupportedGenerators() const
 #ifdef __WXMSW__
     // Windows supported generators
     generators.Add("MinGW Makefiles");
+	generators.Add("NMake Makefiles");
 #else
     // Linux / Mac supported generators
     generators.Add("Unix Makefiles");
@@ -656,12 +657,11 @@ void CMakePlugin::OnExportMakefile(clBuildEvent& event)
         // Relative paths
         const wxString sourceDirEsc = sourceDir.GetPath(wxPATH_NO_SEPARATOR, wxPATH_UNIX);
         const wxString buildDirEsc = buildDir.GetPath(wxPATH_NO_SEPARATOR, wxPATH_UNIX);
-
         // Generated makefile
         content << "CMAKE      := \"" << cmake << "\"\n"
-                                                  "BUILD_DIR  := " << buildDirEsc << "\n"
-                                                                                     "SOURCE_DIR := " << sourceDirEsc
-                << "\n"
+				"BUILD_DIR  := " << buildDirEsc << "\n"
+				"SOURCE_DIR := " << sourceDirEsc
+				<<"\n"
                    "CMAKE_ARGS := " << CreateArguments(*settings, *m_configuration)
                 << "\n"
                    "\n"
@@ -749,10 +749,10 @@ void CMakePlugin::ProcessBuildEvent(clBuildEvent& event, wxString param)
     const wxString projectDirEsc = projectDir.GetPath(wxPATH_NO_SEPARATOR, wxPATH_UNIX);
 
     // Build command
-    wxString cmd = "$(MAKE)";
+    wxString cmd = "cd ";
 
-    if(!projectDirEsc.IsEmpty()) cmd += " -C \"" + projectDirEsc + "\"";
-
+    if(!projectDirEsc.IsEmpty()) cmd += "\"" + projectDirEsc + "\"";
+	cmd += "&& $(MAKE)";
     // Add makefile
     cmd += " -f \"" + project + ".mk\"";
 
