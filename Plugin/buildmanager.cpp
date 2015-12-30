@@ -30,21 +30,12 @@
 
 BuildManager::BuildManager()
 {
-<<<<<<< HEAD
-	// register all builders here
-	AddBuilder(new BuilderGnuMake());
-	AddBuilder(new BuilderGnuMakeOneStep());
-	bool OS_WINDOWS = wxGetOsVersion() & wxOS_WINDOWS ? true : false;
-	if (OS_WINDOWS)
-		AddBuilder(new BuilderNMake());
-=======
     // register all builders here
     AddBuilder(new BuilderGnuMake());
     AddBuilder(new BuilderGnuMakeOneStep());
 #ifdef __WXMSW__
     AddBuilder(new BuilderNMake());
 #endif
->>>>>>> refs/remotes/eranif/master
 }
 
 BuildManager::~BuildManager() { m_builders.clear(); }
