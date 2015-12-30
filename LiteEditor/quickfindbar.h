@@ -52,15 +52,14 @@ protected:
     wxComboBox* m_findWhat;
     wxComboBox* m_replaceWith;
     wxFlatButtonBar* m_bar;
-    
+
     wxFlatButton* m_caseSensitive;
     wxFlatButton* m_wholeWord;
     wxFlatButton* m_regexOrWildButton;
-    wxFlatButton* m_buttonReplace;
+    wxButton* m_buttonReplace;
     wxFlatButton* m_closeButton;
-    wxMenu* m_regexOrWildMenu;
     eRegexType m_regexType;
-    
+    bool m_disableTextUpdateEvent;
     friend class QuickFindBarOptionsMenu;
 
 public:
@@ -87,13 +86,13 @@ private:
     void DoUpdateSearchHistory();
     void DoUpdateReplaceHistory();
     size_t DoGetSearchFlags();
-    
+
 protected:
     virtual void OnReplaceKeyDown(wxKeyEvent& event);
     void DoSearch(size_t searchFlags, int posToSearchFrom = wxNOT_FOUND);
+    void DoFixRegexParen(wxString& findwhat);
     wxString DoGetSelectedText();
-    void DoMarkAll(bool useIndicators = true);
-    wchar_t* DoGetSearchStringPtr();
+    void DoMarkAll();
 
     // General events
     void OnUndo(wxCommandEvent& e);
@@ -102,20 +101,21 @@ protected:
     void OnPaste(wxCommandEvent& e);
     void OnSelectAll(wxCommandEvent& e);
     void OnEditUI(wxUpdateUIEvent& e);
-
+    void DoEnsureSelectionVisible();
+    
     // Control events
     void OnHide(wxCommandEvent& e);
     void OnNext(wxCommandEvent& e);
     void OnPrev(wxCommandEvent& e);
-    void OnButtonNext(wxFlatButtonEvent& e);
-    void OnButtonPrev(wxFlatButtonEvent& e);
-    void OnFindAll(wxFlatButtonEvent& e);
+    void OnFindAll(wxCommandEvent& e);
+    void OnButtonNext(wxCommandEvent& e);
+    void OnButtonPrev(wxCommandEvent& e);
     void OnButtonNextUI(wxUpdateUIEvent& e);
     void OnButtonPrevUI(wxUpdateUIEvent& e);
     void OnText(wxCommandEvent& e);
     void OnKeyDown(wxKeyEvent& e);
     void OnFindMouseWheel(wxMouseEvent& e);
-    void OnButtonReplace(wxFlatButtonEvent& e);
+    void OnButtonReplace(wxCommandEvent& e);
     void OnButtonReplaceUI(wxUpdateUIEvent& e);
     void OnEnter(wxCommandEvent& e);
     void OnReplace(wxCommandEvent& e);
@@ -124,10 +124,8 @@ protected:
     void OnReplaceEnter(wxCommandEvent& e);
     void OnHighlightMatches(wxFlatButtonEvent& e);
     void OnHideBar(wxFlatButtonEvent& e);
-    void OnRegularExpMenu(wxFlatButtonEvent& e);
-    void OnUseRegex(wxCommandEvent& e);
-    void OnNoRegex(wxCommandEvent& e);
-    void OnUseWildcards(wxCommandEvent& e);
+    void OnRegex(wxFlatButtonEvent& event);
+    void OnRegexUI(wxUpdateUIEvent& event);
     void OnHighlightMatchesUI(wxUpdateUIEvent& event);
     void OnQuickFindCommandEvent(wxCommandEvent& event);
     void OnReceivingFocus(wxFocusEvent& event);
