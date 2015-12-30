@@ -226,3 +226,6 @@ Makefile
 
 *.gch
 *.txt
+Runtime/update64.bat
+LiteEditor.workspace
+Runtime/update64.bat
