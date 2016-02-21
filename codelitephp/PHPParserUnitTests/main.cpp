@@ -172,6 +172,24 @@ TEST_FUNC(test_word_completion)
     return true;
 }
 
+// test word completion of a local variable (or anything) after a 
+// casting
+TEST_FUNC(test_word_completion_after_casting)
+{
+    PHPSourceFile sourceFile(wxFileName("../Tests/test_word_completion_after_casting.php"));
+    sourceFile.SetParseFunctionBody(true);
+    sourceFile.Parse();
+    lookup.UpdateSourceFile(sourceFile);
+    PHPExpression expr(sourceFile.GetText());
+    PHPEntityBase::Ptr_t resolved = expr.Resolve(lookup, sourceFile.GetFilename().GetFullPath());
+    
+    CHECK_BOOL(resolved);
+    CHECK_BOOL(resolved->GetShortName().IsEmpty());
+    CHECK_WXSTRING(resolved->GetFullName(), "\\");
+    CHECK_WXSTRING(expr.GetFilter(), "$test_word_complet");
+    return true;
+}
+
 // test word completion when inside a namespace
 // namespace bla;
 // part_w + CTRL+SPACE
@@ -618,7 +636,7 @@ TEST_FUNC(test_php7_function_return_value)
     PHPExpression expr(sourceFile.GetText());
     PHPEntityBase::Ptr_t resolved = expr.Resolve(lookup, sourceFile.GetFilename().GetFullPath());
     CHECK_BOOL(resolved);
-    CHECK_STRING(resolved->GetFullName(), "\\test_php7_function_return_value_class");
+    CHECK_STRING(resolved->GetFullName().c_str(), "\\test_php7_function_return_value_class");
     return true;
 }
 
@@ -632,7 +650,7 @@ TEST_FUNC(test_php7_function_arg_hinting)
     PHPExpression expr(sourceFile.GetText());
     PHPEntityBase::Ptr_t resolved = expr.Resolve(lookup, sourceFile.GetFilename().GetFullPath());
     CHECK_BOOL(resolved);
-    CHECK_STRING(resolved->GetFullName(), "\\test_php7_function_arg_hinting_type2");
+    CHECK_STRING(resolved->GetFullName().c_str(), "\\test_php7_function_arg_hinting_type2");
     
     PHPEntityBase::List_t matches;
     expr.Suggest(resolved, lookup, matches);

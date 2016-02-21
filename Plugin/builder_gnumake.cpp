@@ -1075,7 +1075,7 @@ void BuilderGnuMake::CreateTargets(
         markRebuilt = false;
     }
 
-    // If a link occured, mark this project as "rebuilt" so the parent project will
+    // If a link occurred, mark this project as "rebuilt" so the parent project will
     // know that a re-link is required
     if(bldConf->IsLinkerRequired() && markRebuilt) {
         text << wxT("\t@$(MakeDirCommand) \"") << DoGetMarkerFileDir(wxEmptyString) << wxT("\"\n");
@@ -1806,9 +1806,9 @@ wxString BuilderGnuMake::DoGetCompilerMacro(const wxString& filename)
 
 wxString BuilderGnuMake::DoGetTargetPrefix(const wxFileName& filename, const wxString& cwd, CompilerPtr cmp)
 {
-    size_t count = filename.GetDirCount();
     const wxArrayString& dirs = filename.GetDirs();
     wxString lastDir;
+    wxString ret;
 
     if(cwd == filename.GetPath()) return wxEmptyString;
 
@@ -1818,8 +1818,11 @@ wxString BuilderGnuMake::DoGetTargetPrefix(const wxFileName& filename, const wxS
         return wxEmptyString;
     }
 
-    if(count) {
-        lastDir = dirs.Item(count - 1);
+    // remove cwd from filename
+    int start = wxFileName(cwd).GetDirCount();
+
+    for(size_t i=start+1; i < filename.GetDirCount(); i++) {
+        lastDir = dirs.Item(i);
 
         // Handle special directory paths
         if(lastDir == wxT("..")) {
@@ -1832,9 +1835,11 @@ wxString BuilderGnuMake::DoGetTargetPrefix(const wxFileName& filename, const wxS
         if(lastDir.IsEmpty() == false) {
             lastDir << wxT("_");
         }
+
+        ret += lastDir;
     }
 
-    return lastDir;
+    return ret;
 }
 
 wxString BuilderGnuMake::DoGetMarkerFileDir(const wxString& projname, const wxString& projectPath)

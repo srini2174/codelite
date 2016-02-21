@@ -27,8 +27,6 @@
 #include <map>
 #include <wx/menu.h>
 #include <wx/toolbar.h>
-#include <wx/choice.h>
-#include <wx/arrstr.h>
 #include <wx/splitter.h>
 #include <wx/checklst.h>
 #include <wx/stc/stc.h>
@@ -106,11 +104,11 @@ class GitCommitDlgBase : public wxDialog
 {
 public:
     enum {
-        ID_TOGGLE_CHECKALL = 6001,
+        ID_GIT_COMMIT_HISTORY = 6001,
+        ID_TOGGLE_CHECKALL = 6002,
     };
 protected:
     wxAuiToolBar* m_auibar;
-    wxChoice* m_choiceRecentCommits;
     wxSplitterWindow* m_splitterMain;
     wxPanel* m_panel3;
     wxSplitterWindow* m_splitterInner;
@@ -128,14 +126,14 @@ protected:
 
 protected:
     virtual void OnToggleCheckAll(wxCommandEvent& event) { event.Skip(); }
-    virtual void OnRecentCommitSelected(wxCommandEvent& event) { event.Skip(); }
+    virtual void OnCommitHistory(wxCommandEvent& event) { event.Skip(); }
+    virtual void OnCommitHistoryUI(wxUpdateUIEvent& event) { event.Skip(); }
     virtual void OnClearGitCommitHistory(wxCommandEvent& event) { event.Skip(); }
     virtual void OnClearGitCommitHistoryUI(wxUpdateUIEvent& event) { event.Skip(); }
     virtual void OnChangeFile(wxCommandEvent& event) { event.Skip(); }
     virtual void OnCommitOK(wxCommandEvent& event) { event.Skip(); }
 
 public:
-    wxChoice* GetChoiceRecentCommits() { return m_choiceRecentCommits; }
     wxAuiToolBar* GetAuibar() { return m_auibar; }
     wxCheckListBox* GetListBox() { return m_listBox; }
     wxPanel* GetPanel1() { return m_panel1; }
@@ -159,6 +157,8 @@ protected:
     wxSplitterWindow* m_splitter174;
     wxPanel* m_splitterPage178;
     wxSearchCtrl* m_searchCtrlFilter;
+    wxButton* m_button347;
+    wxButton* m_buttonNext;
     wxDataViewListCtrl* m_dvListCtrlCommitList;
     wxPanel* m_splitterPage182;
     wxSplitterWindow* m_splitter186;
@@ -177,12 +177,17 @@ protected:
 protected:
     virtual void OnClose(wxCloseEvent& event) { event.Skip(); }
     virtual void OnSearchCommitList(wxCommandEvent& event) { event.Skip(); }
+    virtual void OnPrevious(wxCommandEvent& event) { event.Skip(); }
+    virtual void OnPreviousUI(wxUpdateUIEvent& event) { event.Skip(); }
+    virtual void OnNext(wxCommandEvent& event) { event.Skip(); }
     virtual void OnSelectionChanged(wxDataViewEvent& event) { event.Skip(); }
     virtual void OnContextMenu(wxDataViewEvent& event) { event.Skip(); }
     virtual void OnChangeFile(wxCommandEvent& event) { event.Skip(); }
 
 public:
     wxSearchCtrl* GetSearchCtrlFilter() { return m_searchCtrlFilter; }
+    wxButton* GetButton347() { return m_button347; }
+    wxButton* GetButtonNext() { return m_buttonNext; }
     wxDataViewListCtrl* GetDvListCtrlCommitList() { return m_dvListCtrlCommitList; }
     wxPanel* GetSplitterPage178() { return m_splitterPage178; }
     wxStaticText* GetStaticText210() { return m_staticText210; }

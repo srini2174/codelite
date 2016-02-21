@@ -65,7 +65,8 @@ public:
         Opt_FoldHighlightActiveBlock = 0x04000000,
         Opt_EnsureCaptionsVisible = 0x08000000,
         Opt_DisableMouseCtrlZoom = 0x10000000,
-        Opt_UseBlockCaret = 0x20000000,
+        Opt_UseBlockCaret =   0x20000000,
+        Opt_TabStyleMinimal = 0x40000000,
     };
 
 protected:
@@ -139,6 +140,7 @@ protected:
     wxColour m_debuggerMarkerLine;
     wxDirection m_workspaceTabsDirection; // Up/Down/Left/Right
     wxDirection m_outputTabsDirection;    // Up/Down
+    bool m_indentedComments;
 
 public:
     // Helpers
@@ -289,6 +291,7 @@ public:
 
     bool GetHideChangeMarkerMargin() const { return m_hideChangeMarkerMargin; }
 
+    bool GetIndentedComments() const { return m_indentedComments; }
     bool GetDisplayFoldMargin() const { return m_displayFoldMargin; }
     bool GetUnderlineFoldLine() const { return m_underlineFoldLine; }
     bool GetScrollBeyondLastLine() const { return m_scrollBeyondLastLine; }
@@ -308,6 +311,7 @@ public:
     bool GetShowIndentationGuidelines() const { return m_showIndentationGuidelines; }
     wxColour GetCaretLineColour() const { return m_caretLineColour; }
 
+    void SetIndentedComments(bool b) { m_indentedComments = b; }
     void SetDisplayFoldMargin(bool b) { m_displayFoldMargin = b; }
     void SetUnderlineFoldLine(bool b) { m_underlineFoldLine = b; }
     void SetScrollBeyondLastLine(bool b) { m_scrollBeyondLastLine = b; }

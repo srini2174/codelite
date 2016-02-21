@@ -271,7 +271,7 @@ void NodeJSWorkspaceView::DoExecuteProject(NodeJSDebuggerDlg::eDialogType type)
     pj.SetArgs(dlg.GetArgs());
     pj.Save(path);
 
-    NodeJSWorkspace::Get()->GetDebugger()->StartDebugger(dlg.GetCommand());
+    NodeJSWorkspace::Get()->GetDebugger()->StartDebugger(dlg.GetCommand(), dlg.GetWorkingDirectory());
 }
 
 void NodeJSWorkspaceView::OnItemExpanding(wxTreeEvent& event)
@@ -287,7 +287,7 @@ void NodeJSWorkspaceView::OnItemExpanding(wxTreeEvent& event)
     CHECK_PTR_RET(cd);
     CHECK_COND_RET(cd->IsFolder());
 
-    int imageIndex = m_bmpLoader.GetMimeImageId(FileExtManager::TypeProject);
+    int imageIndex = m_bmpLoader->GetMimeImageId(FileExtManager::TypeProject);
     CHECK_COND_RET(imageIndex != wxNOT_FOUND);
 
     {
@@ -319,14 +319,14 @@ void NodeJSWorkspaceView::OnNpmInit(wxCommandEvent& event)
 {
     wxUnusedVar(event);
     if(m_terminal.IsRunning()) return;
-    
+
     wxString path;
     wxTreeItemId item;
     if(!GetSelectProjectPath(path, item)) return;
 
     WebToolsConfig conf;
     conf.Load();
-    
+
 #ifdef __WXOSX__
     wxString command;
     command << "cd \"" << path << "\" && " << conf.GetNpm() << " init";

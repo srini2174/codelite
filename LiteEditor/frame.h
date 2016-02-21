@@ -130,6 +130,7 @@ protected:
     bool IsEditorEvent(wxEvent& event);
     void DoCreateBuildDropDownMenu(wxMenu* menu);
     void DoShowToolbars(bool show);
+    void InitializeLogo();
 
 public:
     static clMainFrame* Get();
@@ -306,7 +307,7 @@ private:
      * Construct all the GUI controls of the main frame. this function is called
      * at construction time
      */
-    void CreateGUIControls(void);
+    void CreateGUIControls();
     /**
      * \brief update the path & name of the build tool
      * on windows, try to locate make, followed by mingw32-make
@@ -558,6 +559,9 @@ protected:
     void OnSyntaxHighlight(wxCommandEvent& e);
     void OnShowWhitespaceUI(wxUpdateUIEvent& e);
     void OnShowWhitespace(wxCommandEvent& e);
+    void OnNextTab(wxCommandEvent& e);
+    void OnPrevTab(wxCommandEvent& e);
+    void OnNextPrevTab_UI(wxUpdateUIEvent& e);
     void OnShowFullScreen(wxCommandEvent& e);
     void OnFindResourceXXX(wxCommandEvent& e);
     void OnShowActiveProjectSettings(wxCommandEvent& e);
@@ -583,6 +587,7 @@ protected:
     void OnSettingsChanged(wxCommandEvent& e);
     void OnEditMenuOpened(wxMenuEvent& e);
     void OnProjectRenamed(clCommandEvent& event);
+
     DECLARE_EVENT_TABLE()
 };
 

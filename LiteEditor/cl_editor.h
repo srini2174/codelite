@@ -53,6 +53,8 @@
 #define MARKER_WORD_HIGHLIGHT 2
 #define USER_INDICATOR 3
 #define HYPERLINK_INDICATOR 4
+#define MARKER_FIND_BAR_WORD_HIGHLIGHT 5
+#define MARKER_CONTEXT_WORD_HIGHLIGHT 6
 
 class wxRichToolTip;
 class CCBoxTipWindow;
@@ -913,6 +915,10 @@ private:
     void DoWrapPrevSelectionWithChars(wxChar first, wxChar last);
     void DoUpdateOptions();
     int GetFirstSingleLineCommentPos(int from, int commentStyle);
+    /**
+     * @brief return number of whitespace characters in the beginning of the line
+     */
+    int GetNumberFirstSpacesInLine(int line);
 
     void FillBPtoMarkerArray();
     BPtoMarker GetMarkerForBreakpt(enum BreakpointType bp_type);

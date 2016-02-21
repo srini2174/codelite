@@ -188,8 +188,8 @@ EVT_IDLE(clMainFrame::OnIdle)
 EVT_ACTIVATE(clMainFrame::OnAppActivated)
 EVT_CLOSE(clMainFrame::OnClose)
 EVT_TIMER(FrameTimerId, clMainFrame::OnTimer)
-//	EVT_AUI_RENDER(Frame::OnAuiManagerRender)
-//	EVT_AUI_PANE_CLOSE(Frame::OnDockablePaneClosed)
+//  EVT_AUI_RENDER(Frame::OnAuiManagerRender)
+//  EVT_AUI_PANE_CLOSE(Frame::OnDockablePaneClosed)
 
 //---------------------------------------------------
 // File menu
@@ -232,6 +232,8 @@ EVT_MENU(wxID_DUPLICATE, clMainFrame::DispatchCommandEvent)
 EVT_MENU(XRCID("delete_line"), clMainFrame::DispatchCommandEvent)
 EVT_MENU(XRCID("delete_line_end"), clMainFrame::DispatchCommandEvent)
 EVT_MENU(XRCID("delete_line_start"), clMainFrame::DispatchCommandEvent)
+EVT_MENU(XRCID("copy_line"), clMainFrame::DispatchCommandEvent)
+EVT_MENU(XRCID("cut_line"), clMainFrame::DispatchCommandEvent)
 EVT_MENU(XRCID("transpose_lines"), clMainFrame::DispatchCommandEvent)
 EVT_MENU(XRCID("trim_trailing"), clMainFrame::DispatchCommandEvent)
 EVT_MENU(XRCID("to_upper"), clMainFrame::DispatchCommandEvent)
@@ -259,6 +261,8 @@ EVT_UPDATE_UI(wxID_DUPLICATE, clMainFrame::DispatchUpdateUIEvent)
 EVT_UPDATE_UI(XRCID("delete_line"), clMainFrame::OnFileExistUpdateUI)
 EVT_UPDATE_UI(XRCID("delete_line_end"), clMainFrame::OnFileExistUpdateUI)
 EVT_UPDATE_UI(XRCID("delete_line_start"), clMainFrame::OnFileExistUpdateUI)
+EVT_UPDATE_UI(XRCID("copy_line"), clMainFrame::OnFileExistUpdateUI)
+EVT_UPDATE_UI(XRCID("cut_line"), clMainFrame::OnFileExistUpdateUI)
 EVT_UPDATE_UI(XRCID("transpose_lines"), clMainFrame::OnFileExistUpdateUI)
 EVT_UPDATE_UI(XRCID("trim_trailing"), clMainFrame::DispatchUpdateUIEvent)
 EVT_UPDATE_UI(XRCID("to_upper"), clMainFrame::DispatchUpdateUIEvent)
@@ -290,6 +294,8 @@ EVT_MENU(XRCID("whitepsace_invisible"), clMainFrame::OnShowWhitespace)
 EVT_MENU(XRCID("whitepsace_always"), clMainFrame::OnShowWhitespace)
 EVT_MENU(XRCID("whitespace_visiable_after_indent"), clMainFrame::OnShowWhitespace)
 EVT_MENU(XRCID("whitespace_indent_only"), clMainFrame::OnShowWhitespace)
+EVT_MENU(XRCID("next_tab"), clMainFrame::OnNextTab)
+EVT_MENU(XRCID("prev_tab"), clMainFrame::OnPrevTab)
 EVT_MENU(XRCID("full_screen"), clMainFrame::OnShowFullScreen)
 EVT_MENU(XRCID("view_welcome_page"), clMainFrame::OnShowWelcomePage)
 EVT_MENU(XRCID("view_welcome_page_at_startup"), clMainFrame::OnLoadWelcomePage)
@@ -311,6 +317,8 @@ EVT_UPDATE_UI(XRCID("fold_all"), clMainFrame::OnFileExistUpdateUI)
 EVT_UPDATE_UI(XRCID("fold_all_in_selection"), clMainFrame::DispatchUpdateUIEvent)
 EVT_UPDATE_UI(XRCID("fold_topmost_in_selection"), clMainFrame::DispatchUpdateUIEvent)
 EVT_UPDATE_UI(XRCID("display_eol"), clMainFrame::OnViewDisplayEOL_UI)
+EVT_UPDATE_UI(XRCID("next_tab"), clMainFrame::OnNextPrevTab_UI)
+EVT_UPDATE_UI(XRCID("prev_tab"), clMainFrame::OnNextPrevTab_UI)
 EVT_UPDATE_UI(XRCID("whitepsace_invisible"), clMainFrame::OnShowWhitespaceUI)
 EVT_UPDATE_UI(XRCID("whitepsace_always"), clMainFrame::OnShowWhitespaceUI)
 EVT_UPDATE_UI(XRCID("whitespace_visiable_after_indent"), clMainFrame::OnShowWhitespaceUI)
@@ -771,6 +779,18 @@ clMainFrame::clMainFrame(
         "selection_to_multi_caret", "Ctrl-Shift-L", _("Edit::Split selection into multiple carets"));
     clKeyboardManager::Get()->AddGlobalAccelerator(
         "incremental_replace", "", _("Search::Toggle the Quick-Replace Bar"));
+    clKeyboardManager::Get()->AddGlobalAccelerator(
+        "copy_file_relative_path_to_workspace", "Ctrl-Alt-Shift-C", "Edit::Copy Path Relative to Clipboard");
+    clKeyboardManager::Get()->AddGlobalAccelerator(
+        "copy_file_name", "", "Edit::Copy Path to Clipboard");
+    clKeyboardManager::Get()->AddGlobalAccelerator(
+        "copy_file_path", "", "Edit::Copy Full Path to Clipboard");
+    clKeyboardManager::Get()->AddGlobalAccelerator(
+        "copy_file_name_only", "", "Edit::Copy File Name to Clipboard");
+    clKeyboardManager::Get()->AddGlobalAccelerator(
+        "open_shell_from_filepath", "Ctrl-Shift-T", "Search::Open Shell From File Path");
+    clKeyboardManager::Get()->AddGlobalAccelerator(
+        "open_file_explorer", "Ctrl-Alt-Shift-T", "Search::Open Containing Folder");
 }
 
 clMainFrame::~clMainFrame(void)
@@ -940,44 +960,8 @@ void clMainFrame::CreateGUIControls()
     SetSizer(new wxBoxSizer(wxVERTICAL));
     m_mainPanel = new wxPanel(this);
     GetSizer()->Add(m_mainPanel, 1, wxEXPAND);
-    
+    InitializeLogo();
     BitmapLoader& bmpLoader = *(PluginManager::Get()->GetStdIcons());
-    wxIconBundle app_icons;
-    {
-        wxBitmap iconBmp = bmpLoader.LoadBitmap("16-codelite-logo");
-        wxIcon icn;
-        icn.CopyFromBitmap(iconBmp);
-        app_icons.AddIcon(icn);
-    }
-
-    {
-        wxBitmap iconBmp = bmpLoader.LoadBitmap("32-codelite-logo");
-        wxIcon icn;
-        icn.CopyFromBitmap(iconBmp);
-        app_icons.AddIcon(icn);
-    }
-
-    {
-        wxBitmap iconBmp = bmpLoader.LoadBitmap("64-codelite-logo");
-        wxIcon icn;
-        icn.CopyFromBitmap(iconBmp);
-        app_icons.AddIcon(icn);
-    }
-
-    {
-        wxBitmap iconBmp = bmpLoader.LoadBitmap("128-codelite-logo");
-        wxIcon icn;
-        icn.CopyFromBitmap(iconBmp);
-        app_icons.AddIcon(icn);
-    }
-    {
-        wxBitmap iconBmp = bmpLoader.LoadBitmap("256-codelite-logo");
-        wxIcon icn;
-        icn.CopyFromBitmap(iconBmp);
-        app_icons.AddIcon(icn);
-    }
-
-    SetIcons(app_icons);
 
 #if defined(__WXOSX__) && wxCHECK_VERSION(3, 1, 0)
     EnableFullScreenView();
@@ -2725,7 +2709,7 @@ void clMainFrame::OnBuildEnded(clCommandEvent& event)
 
     if(m_buildAndRun) {
         // If the build process was part of a 'Build and Run' command, check whether an erros
-        // occured during build process, if non, launch the output
+        // occurred during build process, if non, launch the output
         m_buildAndRun = false;
         if(ManagerST::Get()->IsBuildEndedSuccessfully() ||
             wxMessageBox(_("Build ended with errors. Continue?"), _("Confirm"), wxYES_NO | wxICON_QUESTION, this) ==
@@ -3173,8 +3157,8 @@ void clMainFrame::CreateRecentlyOpenedFilesMenu()
     if(item && menu) {
         wxMenu* submenu = item->GetSubMenu();
         if(submenu) {
-            for(size_t i = 0; i < files.GetCount(); i++) {
-                hs.AddFileToHistory(files.Item(i));
+            for(size_t i = files.GetCount(); i > 0; --i) {
+                hs.AddFileToHistory(files.Item(i - 1));
             }
             // set this menu as the recent file menu
             hs.SetBaseId(RecentFilesSubMenuID + 1);
@@ -3296,7 +3280,7 @@ void clMainFrame::CreateWelcomePage()
     content.Replace(wxT("$(FilesTable)"), filesTable);
 
     //replace the HTML colours with platfroms correct colours
-    wxColour active_caption 	= wxSystemSettings::GetColour(wxSYS_COLOUR_ACTIVECAPTION);
+    wxColour active_caption     = wxSystemSettings::GetColour(wxSYS_COLOUR_ACTIVECAPTION);
     wxColour active_caption_txt = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
 
     active_caption = DrawingUtils::LightColour(active_caption, 11.0);
@@ -4333,16 +4317,19 @@ void clMainFrame::OnReBuildWorkspaceUI(wxUpdateUIEvent& e)
 void clMainFrame::OnOpenShellFromFilePath(wxCommandEvent& e)
 {
     // get the file path
+    wxString filepath;
     LEditor* editor = GetMainBook()->GetActiveEditor();
     if(editor) {
-        wxString filepath = editor->GetFileName().GetPath();
-        DirSaver ds;
-        wxSetWorkingDirectory(filepath);
-
-        // Apply the environment variabels before opening the shell
-        EnvSetter setter;
-        FileUtils::OpenTerminal(filepath);
+        filepath = editor->GetFileName().GetPath();
     }
+
+    if(filepath.IsEmpty()) return;
+    DirSaver ds;
+    wxSetWorkingDirectory(filepath);
+
+    // Apply the environment variabels before opening the shell
+    EnvSetter setter;
+    FileUtils::OpenTerminal(filepath);
 }
 
 void clMainFrame::ShowWelcomePage()
@@ -4615,6 +4602,50 @@ void clMainFrame::OnShowWhitespace(wxCommandEvent& e)
 
     // save the settings
     EditorConfigST::Get()->SetOptions(options);
+}
+
+void clMainFrame::OnNextTab(wxCommandEvent& e)
+{
+    int idx = GetMainBook()->GetCurrentPageIndex();
+
+    if (idx != wxNOT_FOUND) {
+        clTab::Vec_t tabs;
+        GetMainBook()->GetAllTabs(tabs);
+
+        idx = (idx + 1) % tabs.size();
+        GetMainBook()->SelectPage(GetMainBook()->GetPage(idx));
+    }
+}
+
+void clMainFrame::OnPrevTab(wxCommandEvent& e)
+{
+    int idx = GetMainBook()->GetCurrentPageIndex();
+
+    if (idx != wxNOT_FOUND) {
+        idx--;
+
+        if (idx < 0) {
+            clTab::Vec_t tabs;
+            GetMainBook()->GetAllTabs(tabs);
+
+            idx = tabs.size() - 1;
+        }
+
+        GetMainBook()->SelectPage(GetMainBook()->GetPage(idx));
+    }
+}
+
+void clMainFrame::OnNextPrevTab_UI(wxUpdateUIEvent& e)
+{
+    CHECK_SHUTDOWN();
+    LEditor* editor = GetMainBook()->GetActiveEditor();
+    bool hasEditor = editor ? true : false;
+    if(!hasEditor) {
+        e.Enable(false);
+        return;
+    }
+
+    e.Enable(true);
 }
 
 void clMainFrame::OnIncrementalSearch(wxCommandEvent& event)
@@ -5687,7 +5718,7 @@ void clMainFrame::OnShowToolbar(wxCommandEvent& event)
     // Hide the _native_ toolbar
     if(GetMainToolBar()) {
         if(event.IsChecked()) {
-            
+
             SetToolBar(NULL);
 
             // Recreate the toolbar
@@ -5983,9 +6014,58 @@ void clMainFrame::SetToolBar(wxToolBar* tb)
         wxDELETE(m_mainToolBar);
     }
     m_mainToolBar = tb;
-    
+
     if(m_mainToolBar) {
         GetSizer()->Insert(0, m_mainToolBar, 0, wxEXPAND);
         Layout();
     }
+}
+
+void clMainFrame::InitializeLogo()
+{
+    BitmapLoader& bmpLoader = *(PluginManager::Get()->GetStdIcons());
+
+    wxString baseLogoName = "-codelite-logo";
+#ifdef __WXGTK__
+    if(getuid() == 0) {
+        // ROOT_INFO_LUID
+        baseLogoName = "-codelite-logo-root";
+    }
+#endif
+
+    wxIconBundle app_icons;
+    {
+        wxBitmap iconBmp = bmpLoader.LoadBitmap("16" + baseLogoName);
+        wxIcon icn;
+        icn.CopyFromBitmap(iconBmp);
+        app_icons.AddIcon(icn);
+    }
+
+    {
+        wxBitmap iconBmp = bmpLoader.LoadBitmap("32" + baseLogoName);
+        wxIcon icn;
+        icn.CopyFromBitmap(iconBmp);
+        app_icons.AddIcon(icn);
+    }
+
+    {
+        wxBitmap iconBmp = bmpLoader.LoadBitmap("64" + baseLogoName);
+        wxIcon icn;
+        icn.CopyFromBitmap(iconBmp);
+        app_icons.AddIcon(icn);
+    }
+
+    {
+        wxBitmap iconBmp = bmpLoader.LoadBitmap("128" + baseLogoName);
+        wxIcon icn;
+        icn.CopyFromBitmap(iconBmp);
+        app_icons.AddIcon(icn);
+    }
+    {
+        wxBitmap iconBmp = bmpLoader.LoadBitmap("256" + baseLogoName);
+        wxIcon icn;
+        icn.CopyFromBitmap(iconBmp);
+        app_icons.AddIcon(icn);
+    }
+    SetIcons(app_icons);
 }

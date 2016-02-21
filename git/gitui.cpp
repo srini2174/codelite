@@ -257,12 +257,9 @@ GitCommitDlgBase::GitCommitDlgBase(wxWindow* parent, wxWindowID id, const wxStri
     
     m_auibar->AddTool(ID_TOGGLE_CHECKALL, _("Toggle Files"), wxXmlResource::Get()->LoadBitmap(wxT("16-ok")), wxNullBitmap, wxITEM_NORMAL, _("Toggle Check All"), _("Toggle Check All"), NULL);
     
-    m_auibar->AddStretchSpacer(1);
+    m_auibar->AddTool(ID_GIT_COMMIT_HISTORY, _("History"), wxXmlResource::Get()->LoadBitmap(wxT("16-history")), wxNullBitmap, wxITEM_NORMAL, _("Show Commit History"), _("Show Commit History"), NULL);
     
-    wxArrayString m_choiceRecentCommitsArr;
-    m_choiceRecentCommits = new wxChoice(m_auibar, wxID_ANY, wxDefaultPosition, wxSize(300,-1), m_choiceRecentCommitsArr, 0);
-    m_choiceRecentCommits->SetToolTip(_("Recent commits"));
-    m_auibar->AddControl(m_choiceRecentCommits);
+    m_auibar->AddSeparator();
     
     m_auibar->AddTool(wxID_CLEAR, _("Clear History"), wxXmlResource::Get()->LoadBitmap(wxT("16-clear")), wxNullBitmap, wxITEM_NORMAL, _("Clear History"), _("Clear History"), NULL);
     m_auibar->Realize();
@@ -425,7 +422,8 @@ GitCommitDlgBase::GitCommitDlgBase(wxWindow* parent, wxWindowID id, const wxStri
 #endif
     // Connect events
     this->Connect(ID_TOGGLE_CHECKALL, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(GitCommitDlgBase::OnToggleCheckAll), NULL, this);
-    m_choiceRecentCommits->Connect(wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler(GitCommitDlgBase::OnRecentCommitSelected), NULL, this);
+    this->Connect(ID_GIT_COMMIT_HISTORY, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(GitCommitDlgBase::OnCommitHistory), NULL, this);
+    this->Connect(ID_GIT_COMMIT_HISTORY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(GitCommitDlgBase::OnCommitHistoryUI), NULL, this);
     this->Connect(wxID_CLEAR, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(GitCommitDlgBase::OnClearGitCommitHistory), NULL, this);
     this->Connect(wxID_CLEAR, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(GitCommitDlgBase::OnClearGitCommitHistoryUI), NULL, this);
     m_listBox->Connect(wxEVT_COMMAND_LISTBOX_SELECTED, wxCommandEventHandler(GitCommitDlgBase::OnChangeFile), NULL, this);
@@ -436,7 +434,8 @@ GitCommitDlgBase::GitCommitDlgBase(wxWindow* parent, wxWindowID id, const wxStri
 GitCommitDlgBase::~GitCommitDlgBase()
 {
     this->Disconnect(ID_TOGGLE_CHECKALL, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(GitCommitDlgBase::OnToggleCheckAll), NULL, this);
-    m_choiceRecentCommits->Disconnect(wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler(GitCommitDlgBase::OnRecentCommitSelected), NULL, this);
+    this->Disconnect(ID_GIT_COMMIT_HISTORY, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(GitCommitDlgBase::OnCommitHistory), NULL, this);
+    this->Disconnect(ID_GIT_COMMIT_HISTORY, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(GitCommitDlgBase::OnCommitHistoryUI), NULL, this);
     this->Disconnect(wxID_CLEAR, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler(GitCommitDlgBase::OnClearGitCommitHistory), NULL, this);
     this->Disconnect(wxID_CLEAR, wxEVT_UPDATE_UI, wxUpdateUIEventHandler(GitCommitDlgBase::OnClearGitCommitHistoryUI), NULL, this);
     m_listBox->Disconnect(wxEVT_COMMAND_LISTBOX_SELECTED, wxCommandEventHandler(GitCommitDlgBase::OnChangeFile), NULL, this);
@@ -473,7 +472,7 @@ GitCommitListDlgBase::GitCommitListDlgBase(wxWindow* parent, wxWindowID id, cons
     wxBoxSizer* bSizer17 = new wxBoxSizer(wxVERTICAL);
     this->SetSizer(bSizer17);
     
-    m_splitter174 = new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxSize(-1,-1), wxSP_LIVE_UPDATE|wxSP_NO_XP_THEME|wxSP_3DSASH);
+    m_splitter174 = new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxSize(-1,-1), wxSP_LIVE_UPDATE|wxSP_3DSASH);
     m_splitter174->SetSashGravity(0);
     m_splitter174->SetMinimumPaneSize(150);
     
@@ -484,12 +483,27 @@ GitCommitListDlgBase::GitCommitListDlgBase(wxWindow* parent, wxWindowID id, cons
     wxBoxSizer* boxSizer205 = new wxBoxSizer(wxVERTICAL);
     m_splitterPage178->SetSizer(boxSizer205);
     
+    wxBoxSizer* boxSizer343 = new wxBoxSizer(wxHORIZONTAL);
+    
+    boxSizer205->Add(boxSizer343, 0, wxEXPAND, 5);
+    
     m_searchCtrlFilter = new wxSearchCtrl(m_splitterPage178, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(-1,-1), wxTE_PROCESS_ENTER);
     m_searchCtrlFilter->SetToolTip(_("Search the commit list\nThe search is performed on all columns"));
+    m_searchCtrlFilter->SetFocus();
     m_searchCtrlFilter->ShowSearchButton(true);
     m_searchCtrlFilter->ShowCancelButton(false);
     
-    boxSizer205->Add(m_searchCtrlFilter, 0, wxALL|wxEXPAND, 5);
+    boxSizer343->Add(m_searchCtrlFilter, 1, wxALL|wxALIGN_CENTER_VERTICAL, 2);
+    
+    m_button347 = new wxButton(m_splitterPage178, wxID_BACKWARD, _("Previous"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_button347->SetToolTip(_("Show previous 100 commits"));
+    
+    boxSizer343->Add(m_button347, 0, wxALL, 2);
+    
+    m_buttonNext = new wxButton(m_splitterPage178, wxID_FORWARD, _("Next"), wxDefaultPosition, wxSize(-1,-1), 0);
+    m_buttonNext->SetToolTip(_("Fetch the next 100 commits"));
+    
+    boxSizer343->Add(m_buttonNext, 0, wxALL|wxALIGN_CENTER_VERTICAL, 2);
     
     m_dvListCtrlCommitList = new wxDataViewListCtrl(m_splitterPage178, wxID_ANY, wxDefaultPosition, wxSize(500,-1), wxDV_VERT_RULES|wxDV_ROW_LINES|wxDV_SINGLE);
     
@@ -505,22 +519,22 @@ GitCommitListDlgBase::GitCommitListDlgBase(wxWindow* parent, wxWindowID id, cons
     wxBoxSizer* boxSizer184 = new wxBoxSizer(wxVERTICAL);
     m_splitterPage182->SetSizer(boxSizer184);
     
-    m_splitter186 = new wxSplitterWindow(m_splitterPage182, wxID_ANY, wxDefaultPosition, wxSize(-1,-1), wxSP_LIVE_UPDATE|wxSP_NO_XP_THEME|wxSP_3DSASH);
+    m_splitter186 = new wxSplitterWindow(m_splitterPage182, wxID_ANY, wxDefaultPosition, wxSize(-1,-1), wxSP_LIVE_UPDATE|wxSP_3DSASH);
     m_splitter186->SetSashGravity(1);
     m_splitter186->SetMinimumPaneSize(100);
     
-    boxSizer184->Add(m_splitter186, 1, wxEXPAND, 5);
+    boxSizer184->Add(m_splitter186, 1, wxEXPAND, 2);
     
     m_splitterPage190 = new wxPanel(m_splitter186, wxID_ANY, wxDefaultPosition, wxSize(-1,-1), wxTAB_TRAVERSAL);
     
     wxBoxSizer* bSizer18 = new wxBoxSizer(wxHORIZONTAL);
     m_splitterPage190->SetSizer(bSizer18);
     
-    m_splitter196 = new wxSplitterWindow(m_splitterPage190, wxID_ANY, wxDefaultPosition, wxSize(-1,-1), wxSP_LIVE_UPDATE|wxSP_NO_XP_THEME|wxSP_3DSASH);
+    m_splitter196 = new wxSplitterWindow(m_splitterPage190, wxID_ANY, wxDefaultPosition, wxSize(-1,-1), wxSP_LIVE_UPDATE|wxSP_3DSASH);
     m_splitter196->SetSashGravity(0);
     m_splitter196->SetMinimumPaneSize(100);
     
-    bSizer18->Add(m_splitter196, 1, wxALL|wxEXPAND, 5);
+    bSizer18->Add(m_splitter196, 1, wxEXPAND, 2);
     
     m_splitterPage200 = new wxPanel(m_splitter196, wxID_ANY, wxDefaultPosition, wxSize(-1,-1), wxTAB_TRAVERSAL);
     
@@ -653,6 +667,9 @@ GitCommitListDlgBase::GitCommitListDlgBase(wxWindow* parent, wxWindowID id, cons
     this->Connect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(GitCommitListDlgBase::OnClose), NULL, this);
     m_searchCtrlFilter->Connect(wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler(GitCommitListDlgBase::OnSearchCommitList), NULL, this);
     m_searchCtrlFilter->Connect(wxEVT_COMMAND_SEARCHCTRL_SEARCH_BTN, wxCommandEventHandler(GitCommitListDlgBase::OnSearchCommitList), NULL, this);
+    m_button347->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(GitCommitListDlgBase::OnPrevious), NULL, this);
+    m_button347->Connect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(GitCommitListDlgBase::OnPreviousUI), NULL, this);
+    m_buttonNext->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(GitCommitListDlgBase::OnNext), NULL, this);
     m_dvListCtrlCommitList->Connect(wxEVT_COMMAND_DATAVIEW_SELECTION_CHANGED, wxDataViewEventHandler(GitCommitListDlgBase::OnSelectionChanged), NULL, this);
     m_dvListCtrlCommitList->Connect(wxEVT_COMMAND_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(GitCommitListDlgBase::OnContextMenu), NULL, this);
     m_fileListBox->Connect(wxEVT_COMMAND_LISTBOX_SELECTED, wxCommandEventHandler(GitCommitListDlgBase::OnChangeFile), NULL, this);
@@ -664,6 +681,9 @@ GitCommitListDlgBase::~GitCommitListDlgBase()
     this->Disconnect(wxEVT_CLOSE_WINDOW, wxCloseEventHandler(GitCommitListDlgBase::OnClose), NULL, this);
     m_searchCtrlFilter->Disconnect(wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler(GitCommitListDlgBase::OnSearchCommitList), NULL, this);
     m_searchCtrlFilter->Disconnect(wxEVT_COMMAND_SEARCHCTRL_SEARCH_BTN, wxCommandEventHandler(GitCommitListDlgBase::OnSearchCommitList), NULL, this);
+    m_button347->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(GitCommitListDlgBase::OnPrevious), NULL, this);
+    m_button347->Disconnect(wxEVT_UPDATE_UI, wxUpdateUIEventHandler(GitCommitListDlgBase::OnPreviousUI), NULL, this);
+    m_buttonNext->Disconnect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(GitCommitListDlgBase::OnNext), NULL, this);
     m_dvListCtrlCommitList->Disconnect(wxEVT_COMMAND_DATAVIEW_SELECTION_CHANGED, wxDataViewEventHandler(GitCommitListDlgBase::OnSelectionChanged), NULL, this);
     m_dvListCtrlCommitList->Disconnect(wxEVT_COMMAND_DATAVIEW_ITEM_CONTEXT_MENU, wxDataViewEventHandler(GitCommitListDlgBase::OnContextMenu), NULL, this);
     m_fileListBox->Disconnect(wxEVT_COMMAND_LISTBOX_SELECTED, wxCommandEventHandler(GitCommitListDlgBase::OnChangeFile), NULL, this);

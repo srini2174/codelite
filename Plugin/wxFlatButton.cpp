@@ -9,6 +9,7 @@
 
 static wxBitmap ConvertToDisabled(const wxBitmap& bmp)
 {
+#if wxVERSION_NUMBER >= 3100 && !defined(__WXMSW__)
     // Convert the image to disabled
     // It seems that m_bitmap.ConvertToDisabled() looses the scale
     // factor, so use this kind of conversion
@@ -17,6 +18,9 @@ static wxBitmap ConvertToDisabled(const wxBitmap& bmp)
     // Keep the original m_bitmap scale factor
     wxBitmap disabledBmp = wxBitmap(img, -1, bmp.GetScaleFactor());
     return disabledBmp;
+#else
+    return bmp.ConvertToDisabled();
+#endif
 }
 
 wxDEFINE_EVENT(wxEVT_CMD_FLATBUTTON_CLICK, wxFlatButtonEvent);
@@ -238,8 +242,8 @@ void wxFlatButton::OnPaint(wxPaintEvent& event)
     wxColour textColour = IsEnabled() ? GetTextColour() : GetTextColourDisabled();
     wxBitmap bmp = IsEnabled() ? m_bmp : m_bmpDisabled;
 
-    wxCoord textX, textY;
-    wxCoord bmpX, bmpY;
+    wxCoord textY;
+    wxCoord bmpY;
 
     wxCoord totalLen = 0;
     const int spacer = 2;
@@ -248,7 +252,6 @@ void wxFlatButton::OnPaint(wxPaintEvent& event)
         totalLen += bmp.GetScaledWidth();
     }
 
-    int textHeight = 16; // default
     wxSize textSize;
     if(!m_text.IsEmpty()) {
         textSize = gdc.GetTextExtent(m_text);

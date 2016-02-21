@@ -111,6 +111,12 @@ WebToolsSettingsBase::WebToolsSettingsBase(wxWindow* parent, wxWindowID id, cons
     m_pgPropNode = m_pgMgr->AppendIn( m_pgProp46,  new wxBoolProperty( _("Node.js"), wxPG_LABEL, 1) );
     m_pgPropNode->SetHelpString(_("Provides variables that are part of the node environment, such as process and require, and hooks up require to try and find the dependencies that are being loaded, and assign them the correct types. It also includes types for the built-in modules that node.js provides (\"fs\", \"http\", etc)"));
     
+    m_pgPropNodeExpress = m_pgMgr->AppendIn( m_pgProp46,  new wxBoolProperty( _("Node Express"), wxPG_LABEL, 1) );
+    m_pgPropNodeExpress->SetHelpString(_("A Tern plugin adding support for express web application framework for node. http://expressjs.com/"));
+    
+    m_pgPropWebPack = m_pgMgr->AppendIn( m_pgProp46,  new wxBoolProperty( _("WebPack"), wxPG_LABEL, 1) );
+    m_pgPropWebPack->SetHelpString(_("Support WebPack"));
+    
     m_pgPropRequireJS = m_pgMgr->AppendIn( m_pgProp46,  new wxBoolProperty( _("RequireJS"), wxPG_LABEL, 1) );
     m_pgPropRequireJS->SetHelpString(_("This plugin (\"requirejs\") teaches the server to understand RequireJS-style dependency management. It defines the global functions define and requirejs, and will do its best to resolve dependencies and give them their proper types"));
     
@@ -280,6 +286,14 @@ NodeJSDebuggerDlgBase::NodeJSDebuggerDlgBase(wxWindow* parent, wxWindowID id, co
     m_filePickerScript->SetToolTip(_("Select the script to execute"));
     
     flexGridSizer76->Add(m_filePickerScript, 0, wxALL|wxEXPAND, 5);
+    
+    m_staticText257 = new wxStaticText(this, wxID_ANY, _("Working directory:"), wxDefaultPosition, wxSize(-1,-1), 0);
+    
+    flexGridSizer76->Add(m_staticText257, 0, wxALL|wxALIGN_RIGHT|wxALIGN_CENTER_VERTICAL, 5);
+    
+    m_dirPickerWorkingDirectory = new wxDirPickerCtrl(this, wxID_ANY, wxEmptyString, _("Select a folder"), wxDefaultPosition, wxSize(-1,-1), wxDIRP_SMALL|wxDIRP_DEFAULT_STYLE|wxDIRP_USE_TEXTCTRL);
+    
+    flexGridSizer76->Add(m_dirPickerWorkingDirectory, 0, wxALL|wxEXPAND, 5);
     
     m_staticTextDebuggerPort = new wxStaticText(this, wxID_ANY, _("Debugger port:"), wxDefaultPosition, wxSize(-1,-1), 0);
     

@@ -794,6 +794,21 @@ void LEditor::SetProperties()
         IndicatorSetAlpha(MARKER_WORD_HIGHLIGHT, alpha);
     }
 
+    IndicatorSetUnder(MARKER_FIND_BAR_WORD_HIGHLIGHT, true);
+    IndicatorSetStyle(MARKER_FIND_BAR_WORD_HIGHLIGHT, wxSTC_INDIC_BOX);
+    bool isDarkTheme = (lexer && lexer->IsDark());
+    IndicatorSetForeground(MARKER_FIND_BAR_WORD_HIGHLIGHT, isDarkTheme ? "WHITE" : "BLACK");
+    if(alpha != wxNOT_FOUND) {
+        IndicatorSetAlpha(MARKER_FIND_BAR_WORD_HIGHLIGHT, alpha);
+    }
+
+    IndicatorSetUnder(MARKER_CONTEXT_WORD_HIGHLIGHT, true);
+    IndicatorSetStyle(MARKER_CONTEXT_WORD_HIGHLIGHT, wxSTC_INDIC_BOX);
+    IndicatorSetForeground(MARKER_CONTEXT_WORD_HIGHLIGHT, isDarkTheme ? "WHITE" : "BLACK");
+    if(alpha != wxNOT_FOUND) {
+        IndicatorSetAlpha(MARKER_CONTEXT_WORD_HIGHLIGHT, alpha);
+    }
+
     IndicatorSetStyle(HYPERLINK_INDICATOR, wxSTC_INDIC_PLAIN);
     IndicatorSetStyle(MATCH_INDICATOR, wxSTC_INDIC_BOX);
     IndicatorSetForeground(MATCH_INDICATOR, wxT("GREY"));
@@ -2630,6 +2645,9 @@ void LEditor::DelAllMarkers(int which_type)
 
     SetIndicatorCurrent(DEBUGGER_INDICATOR);
     IndicatorClearRange(0, GetLength());
+
+    SetIndicatorCurrent(MARKER_FIND_BAR_WORD_HIGHLIGHT);
+    IndicatorClearRange(0, GetLength());
 }
 
 bool LEditor::HasCompilerMarkers()
@@ -3240,7 +3258,11 @@ void LEditor::OnLeftDown(wxMouseEvent& event)
 {
     HighlightWord(false);
     wxDELETE(m_richTooltip);
-
+    
+    // Clear context word highlight
+    SetIndicatorCurrent(MARKER_CONTEXT_WORD_HIGHLIGHT);
+    IndicatorClearRange(0, GetLength());
+ 
     // hide completion box
     DoCancelCalltip();
     GetFunctionTip()->Deactivate();
@@ -4963,7 +4985,6 @@ void LEditor::DoWrapPrevSelectionWithChars(wxChar first, wxChar last)
 void LEditor::OnTimer(wxTimerEvent& event)
 {
     event.Skip();
-
     m_timerHighlightMarkers->Start(100, true);
     if(!HasFocus()) return;
 
@@ -5006,6 +5027,7 @@ void LEditor::OnTimer(wxTimerEvent& event)
             CL_DEBUG1("highlight_word is OFF");
         }
     }
+    GetContext()->ProcessIdleActions();
 }
 
 void LEditor::SplitSelection()
@@ -5142,9 +5164,21 @@ int LEditor::GetFirstSingleLineCommentPos(int from, int commentStyle)
 {
     int lineNu = LineFromPos(from);
     int lastPos = from + LineLength(lineNu);
-    for(int i = from; from < lastPos; ++i) {
+    for(int i = from; i < lastPos; ++i) {
         if(GetStyleAt(i) == commentStyle) {
             return i;
+        }
+    }
+    return wxNOT_FOUND;
+}
+
+int LEditor::GetNumberFirstSpacesInLine(int line)
+{
+    int start = PositionFromLine(line);
+    int lastPos = start + LineLength(line);
+    for(int i = start; i < lastPos; ++i) {
+        if(!isspace(GetCharAt(i))) {
+            return i - start;
         }
     }
     return wxNOT_FOUND;
@@ -5169,16 +5203,50 @@ void LEditor::ToggleLineComment(const wxString& commentSymbol, int commentStyle)
                                        // the same style as the char before it
     }
 
-    bool doingComment = (GetStyleAt(start) != commentStyle);
-
     int lineStart = LineFromPosition(start);
     int lineEnd = LineFromPosition(end);
+
+    bool indentedComments = GetOptions()->GetIndentedComments();
+
+    bool doingComment;
+    int indent = 0;
+    if(indentedComments) {
+        // Check if there is a comment in the line 'lineStart'
+        int startCommentPos = GetFirstSingleLineCommentPos(PositionFromLine(lineStart), commentStyle);
+        doingComment = (startCommentPos == wxNOT_FOUND);
+        if(doingComment) {
+            // Find the minimum indent (in whitespace characters) among all the selected lines
+            // The comments will be indented with the found number of characters
+            indent = 100000;
+            bool indentFound = false;
+            for(int i = lineStart; i <= lineEnd; i++) {
+                int indentThisLine = GetNumberFirstSpacesInLine(i);
+                if((indentThisLine != wxNOT_FOUND) && (indentThisLine < indent)) {
+                    indent = indentThisLine;
+                    indentFound = true;
+                }
+            }
+            if(!indentFound) {
+                // Set the indent to zero in case of selection of empty lines
+                indent = 0;
+            }
+        }
+    } else {
+        doingComment = (GetStyleAt(start) != commentStyle);
+    }
 
     BeginUndoAction();
     for(; lineStart <= lineEnd; lineStart++) {
         start = PositionFromLine(lineStart);
         if(doingComment) {
-            InsertText(start, commentSymbol);
+            if(indentedComments) {
+                if(indent < LineLength(lineStart)) {
+                    // Shift the position of the comment by the 'indent' number of characters
+                    InsertText(start + indent, commentSymbol);
+                }
+            } else {
+                InsertText(start, commentSymbol);
+            }
 
         } else {
             int firstCommentPos = GetFirstSingleLineCommentPos(start, commentStyle);

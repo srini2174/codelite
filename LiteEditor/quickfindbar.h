@@ -57,6 +57,7 @@ protected:
     wxFlatButton* m_wholeWord;
     wxFlatButton* m_regexOrWildButton;
     wxButton* m_buttonReplace;
+    wxButton* m_buttonReplaceAll;
     wxFlatButton* m_closeButton;
     eRegexType m_regexType;
     bool m_disableTextUpdateEvent;
@@ -76,9 +77,7 @@ public:
     };
 
     enum {
-        kSearchForward = 0x00000001,
-        kSearchIncremental = 0x00000002,
-        kSearchMultiSelect = 0x00000004,
+        kSearchForward = (1 << 0),
     };
 
 private:
@@ -89,11 +88,12 @@ private:
 
 protected:
     virtual void OnReplaceKeyDown(wxKeyEvent& event);
-    void DoSearch(size_t searchFlags, int posToSearchFrom = wxNOT_FOUND);
+    void DoSearch(size_t searchFlags);
+    void DoSetCaretAtEndOfText();
     void DoFixRegexParen(wxString& findwhat);
     wxString DoGetSelectedText();
-    void DoMarkAll();
-
+    void DoSelectAll(bool addMarkers);
+    
     // General events
     void OnUndo(wxCommandEvent& e);
     void OnRedo(wxCommandEvent& e);
@@ -101,8 +101,8 @@ protected:
     void OnPaste(wxCommandEvent& e);
     void OnSelectAll(wxCommandEvent& e);
     void OnEditUI(wxUpdateUIEvent& e);
-    void DoEnsureSelectionVisible();
-    
+    void DoEnsureLineIsVisible(int line = wxNOT_FOUND);
+
     // Control events
     void OnHide(wxCommandEvent& e);
     void OnNext(wxCommandEvent& e);
@@ -116,6 +116,7 @@ protected:
     void OnKeyDown(wxKeyEvent& e);
     void OnFindMouseWheel(wxMouseEvent& e);
     void OnButtonReplace(wxCommandEvent& e);
+    void OnReplaceAll(wxCommandEvent& e);
     void OnButtonReplaceUI(wxUpdateUIEvent& e);
     void OnEnter(wxCommandEvent& e);
     void OnReplace(wxCommandEvent& e);
