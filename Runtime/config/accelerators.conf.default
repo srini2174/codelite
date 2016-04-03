@@ -2,6 +2,7 @@ new_file|File|New File|Ctrl-N
 open_file|File|Open File...|Ctrl-O
 refresh_file|File|Reload File|Ctrl-R
 save_file|File|Save File|Ctrl-S
+duplicate_tab|File|Duplicate Tab|
 save_file_as|File|Save As...|Ctrl-Shift-S
 save_all|File|Save all files|
 close_file|File|Close|Ctrl-W
@@ -62,6 +63,7 @@ show_search_toolbar|View::Toolbars|Search ToolBar|
 show_build_toolbar|View::Toolbars|Build ToolBar|
 show_debug_toolbar|View::Toolbars|Debug ToolBar|
 toggle_panes|View|Toggle All Panes|Ctrl-M
+distraction_free_mode|View|Toggle Minimal View|Ctrl-F11
 find_in_files|Search::Find In Files|Find In Files...|Ctrl-Shift-F
 wxID_FIND|Search::Find and Replace|Find...|Ctrl-F
 ID_QUICK_ADD_NEXT|Search::Find and Replace|Quick Add Next|Ctrl-K
@@ -121,6 +123,8 @@ dbg_next|Debugger|Next|F10
 dbg_nexti|Debugger|Next Instruction|Ctrl-F10
 dbg_stepout|Debugger|Step Out|Shift-F11
 show_cursor|Debugger|Show Cursor|
+dbg_run_to_cursor|Debugger|Run to Caret Line|
+dbg_jump_cursor|Debugger|Jump to Caret Line|
 insert_breakpoint|Debugger|Toggle Breakpoint|F9
 disable_all_breakpoints|Debugger|Disable All Breakpoints|
 enable_all_breakpoints|Debugger|Enable All Breakpoints|
@@ -164,7 +168,6 @@ select_next|Search|Select Next Occurrence|Ctrl-F3
 select_previous|Search|Select Previous Occurrence|Ctrl-Shift-F3
 hide_status_bar|View|Show Status Bar|
 hide_tool_bar|View|Show ToolBar|
-minimal_view|View|Toggle Minimal View|
 unittestpp_new_simple_test|Plugins::UnitTest++|Create new test...|
 unittestpp_new_class_test|Plugins::UnitTest++|Create tests for class...|
 mark_project_as_ut|Plugins::UnitTest++|Mark this project as UnitTest++ project|

@@ -323,6 +323,8 @@
       <File Name="clResizableTooltip.cpp"/>
       <File Name="clTreeKeyboardInput.h"/>
       <File Name="clTreeKeyboardInput.cpp"/>
+      <File Name="clBitmapOverlayCtrl.h"/>
+      <File Name="clBitmapOverlayCtrl.cpp"/>
     </VirtualDirectory>
     <VirtualDirectory Name="Dialogs">
       <File Name="nameanddescdlg.h"/>
@@ -401,6 +403,8 @@
     <File Name="clWorkspaceView.cpp"/>
     <File Name="clMouseCaptureLocker.h"/>
     <File Name="clMouseCaptureLocker.cpp"/>
+    <File Name="clMainFrameHelper.h"/>
+    <File Name="clMainFrameHelper.cpp"/>
   </VirtualDirectory>
   <VirtualDirectory Name="JobQueue">
     <File Name="jobqueue.cpp"/>
@@ -455,6 +459,7 @@
       <File Name="WSImporterDlgs_plugin_bitmaps.cpp"/>
       <File Name="clSelectSymbolDialogBase_plugin_bitmaps.cpp"/>
       <File Name="nameanddescdlg_plugin_bitmaps.cpp"/>
+      <File Name="MacrosBaseDlg_plugin_bitmaps.cpp"/>
     </VirtualDirectory>
     <VirtualDirectory Name="base">
       <File Name="VirtualDirectorySelectorBase.h"/>
@@ -482,6 +487,7 @@
     <File Name="clBoostrapWizardBase.wxcp"/>
     <File Name="WSImporterDlgs.wxcp"/>
     <File Name="clSelectSymbolDialogBase.wxcp"/>
+    <File Name="MacrosBaseDlg.wxcp"/>
   </VirtualDirectory>
   <VirtualDirectory Name="sftp_ui">
     <File Name="AddSSHAcountDlg.cpp"/>
@@ -581,6 +587,10 @@
   <Dependencies Name="Win_x64_Debug"/>
   <Dependencies Name="Win_x64_Release"/>
   <Dependencies Name="Win_x86_Release"/>
+  <VirtualDirectory Name="NodeJS">
+    <File Name="NodeJSLocator.h"/>
+    <File Name="NodeJSLocator.cpp"/>
+  </VirtualDirectory>
   <Settings Type="Dynamic Library">
     <GlobalSettings>
       <Compiler Options="" C_Options="" Assembler="">
@@ -763,7 +773,8 @@
       </Environment>
       <Debugger IsRemote="no" RemoteHostName="" RemoteHostPort="" DebuggerPath="" IsExtended="no">
         <DebuggerSearchPaths/>
-        <PostConnectCommands/>
+        <PostConnectCommands>
+</PostConnectCommands>
         <StartupCommands/>
       </Debugger>
       <PreBuild/>
@@ -788,8 +799,20 @@
       <Completion EnableCpp11="no" EnableCpp14="no">
         <ClangCmpFlagsC/>
         <ClangCmpFlags/>
-        <ClangPP/>
-        <SearchPaths/>
+        <ClangPP>
+
+
+
+
+
+</ClangPP>
+        <SearchPaths>
+
+
+
+
+
+</SearchPaths>
       </Completion>
     </Configuration>
     <Configuration Name="Win_x86_Release" CompilerType="gnu g++" DebuggerType="GNU gdb debugger" Type="Dynamic Library" BuildCmpWithGlobalSettings="append" BuildLnkWithGlobalSettings="append" BuildResWithGlobalSettings="append">
@@ -845,8 +868,4 @@
       </Completion>
     </Configuration>
   </Settings>
-  <VirtualDirectory Name="NodeJS">
-    <File Name="NodeJSLocator.h"/>
-    <File Name="NodeJSLocator.cpp"/>
-  </VirtualDirectory>
 </CodeLite_Project>

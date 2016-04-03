@@ -34,6 +34,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 ## Defaults
 #############################################
 project( "CodeLite" )
+if(APPLE)
+  execute_process(COMMAND make type=release os=osx clean WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/PCH)
+  execute_process(COMMAND make type=release os=osx WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/PCH)
+endif()
 
 ## Generate compile_commands.json file for code completion
 set( CMAKE_EXPORT_COMPILE_COMMANDS 1 )
@@ -60,6 +64,15 @@ set( CL_COPY_WX_LIBS 0 )
 set( WITH_SFTP 1 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations") # Avoid very multiple warnings spam due to deprecated wx methods
+
+if ( UNIX )
+	# Configure CCache if available
+	find_program(CCACHE_FOUND ccache)
+	if (CCACHE_FOUND)
+		set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+		set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+	endif(CCACHE_FOUND)
+endif(UNIX)
 
 if ( UNIX )
     execute_process(COMMAND pwd OUTPUT_VARIABLE BUILD_DIRECTORY OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -383,7 +396,7 @@ if ( MAKE_DEB )
 
     set(CPACK_GENERATOR                   "DEB")
     set(CPACK_PACKAGE_NAME                "CodeLite")
-    set(CPACK_PACKAGE_VERSION             "9.1.2")
+    set(CPACK_PACKAGE_VERSION             "9.1.5")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER   "Eran Ifrah <eran.ifrah@gmail.com>")
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "C/C++/PHP and Node.js IDE (Integrated Development Environment)")
     set(CPACK_DEBIAN_PACKAGE_SECTION      "devel")

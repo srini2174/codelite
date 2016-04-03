@@ -191,11 +191,8 @@ WXDLLIMPEXP_SDK wxString ExpandVariables(
  * \param fileName file name, to help expand the $(CurrentFile) macro family
  * \return an expanded string. If a macro is unknown it is replaced by empty string
  */
-WXDLLIMPEXP_SDK wxString ExpandAllVariables(const wxString& expression,
-    clCxxWorkspace* workspace,
-    const wxString& projectName,
-    const wxString& selConf,
-    const wxString& fileName);
+WXDLLIMPEXP_SDK wxString ExpandAllVariables(const wxString& expression, clCxxWorkspace* workspace,
+    const wxString& projectName, const wxString& selConf, const wxString& fileName);
 
 /**
  * \brief copy entire directory content (recursievly) from source to target
@@ -435,7 +432,25 @@ WXDLLIMPEXP_SDK void LaunchTerminalForDebugger(const wxString& title, wxString& 
  * @brief prompt the user with a wxRichMessageDialog with a checkbox "Don't show this message again"
  * @param message the message to show to the user
  * @param checkboxLabel the message to display next to the checkbox
- * @param dlgId a unique string ID which will be used for storing the user value incase he checks the 'dont annoy me
+ * @param dlgId a unique string ID which will be used for storing the user value in case he checks the 'dont annoy me
+ * again' checkbox
+ * @param yesLabel set a different label to the "Yes" button
+ * @param noLabel set a different label to the "No" button
+ * @param cancelLabel set a different label to the "Cancel" button
+ * @param style the wxRichMessageDialog style
+ * @param checkboxInitialValue
+ * @return wxRichMessageDialog::ShowModal() return value
+ */
+WXDLLIMPEXP_SDK wxStandardID PromptForYesNoCancelDialogWithCheckbox(const wxString& message, const wxString& dlgId,
+    const wxString& yesLabel = _("Yes"), const wxString& noLabel = _("No"), const wxString& cancelLabel = _("Cancel"),
+    const wxString& checkboxLabel = _("Remember my answer and don't ask me again"),
+    long style = wxYES_NO | wxCANCEL | wxICON_QUESTION | wxYES_DEFAULT, bool checkboxInitialValue = false);
+
+/**
+ * @brief prompt the user with a PromptForYesNoCancelDialogWithCheckbox minus the 'Cancel' button
+ * @param message the message to show to the user
+ * @param checkboxLabel the message to display next to the checkbox
+ * @param dlgId a unique string ID which will be used for storing the user value in case he checks the 'dont annoy me
  * again' checkbox
  * @param yesLabel set a different label to the "Yes" button
  * @param noLabel set a different label to the "No" button
@@ -443,13 +458,10 @@ WXDLLIMPEXP_SDK void LaunchTerminalForDebugger(const wxString& title, wxString& 
  * @param checkboxInitialValue
  * @return wxRichMessageDialog::ShowModal() return value
  */
-WXDLLIMPEXP_SDK wxStandardID PromptForYesNoDialogWithCheckbox(const wxString& message,
-    const wxString& dlgId,
-    const wxString& yesLabel = _("Yes"),
-    const wxString& noLabel = _("No"),
+WXDLLIMPEXP_SDK wxStandardID PromptForYesNoDialogWithCheckbox(const wxString& message, const wxString& dlgId,
+    const wxString& yesLabel = _("Yes"), const wxString& noLabel = _("No"),
     const wxString& checkboxLabel = _("Remember my answer and don't ask me again"),
-    long style = wxYES_NO | wxICON_QUESTION | wxYES_DEFAULT,
-    bool checkboxInitialValue = false);
+    long style = wxYES_NO | wxICON_QUESTION | wxYES_DEFAULT, bool checkboxInitialValue = false);
 
 /**
  * @brief wrap string with quotes if needed
@@ -504,11 +516,8 @@ WXDLLIMPEXP_SDK void wxPGPropertyBooleanUseCheckbox(wxPropertyGrid* grid);
  */
 WXDLLIMPEXP_SDK void clRecalculateSTCHScrollBar(wxStyledTextCtrl* ctrl);
 
-WXDLLIMPEXP_SDK wxString clGetTextFromUser(const wxString& title,
-    const wxString& message,
-    const wxString& initialValue = "",
-    int charsToSelect = wxNOT_FOUND,
-    wxWindow* parent = NULL);
+WXDLLIMPEXP_SDK wxString clGetTextFromUser(const wxString& title, const wxString& message,
+    const wxString& initialValue = "", int charsToSelect = wxNOT_FOUND, wxWindow* parent = NULL);
 /**
  * @brief return the instance to the plugin manager. A convinience method
  */
@@ -518,5 +527,10 @@ WXDLLIMPEXP_SDK IManager* clGetManager();
  * @param manager
  */
 WXDLLIMPEXP_SDK void clSetManager(IManager* manager);
+
+/**
+ * @brief remove terminal colours from buffer
+ */
+WXDLLIMPEXP_SDK void clStripTerminalColouring(const wxString& buffer, wxString& modbuffer);
 
 #endif // GLOBALS_H

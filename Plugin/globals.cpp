@@ -77,6 +77,7 @@
 #include "cl_standard_paths.h"
 #include "clGetTextFromUserDialog.h"
 #include "fileutils.h"
+#include "macromanager.h"
 
 #ifdef __WXMSW__
 #include <Uxtheme.h>
@@ -179,11 +180,8 @@ clInternalEventHandler clEventHandlerHelper;
 // Internal handler to handle queuing requests... end
 // --------------------------------------------------------
 
-static wxString DoExpandAllVariables(const wxString& expression,
-    clCxxWorkspace* workspace,
-    const wxString& projectName,
-    const wxString& confToBuild,
-    const wxString& fileName);
+static wxString DoExpandAllVariables(const wxString& expression, clCxxWorkspace* workspace, const wxString& projectName,
+    const wxString& confToBuild, const wxString& fileName);
 
 #ifdef __WXMAC__
 #include <mach-o/dyld.h>
@@ -435,11 +433,8 @@ wxString ExpandVariables(const wxString& expression, ProjectPtr proj, IEditor* e
 }
 
 // This functions accepts expression and expand all variables in it
-wxString ExpandAllVariables(const wxString& expression,
-    clCxxWorkspace* workspace,
-    const wxString& projectName,
-    const wxString& selConf,
-    const wxString& fileName)
+wxString ExpandAllVariables(const wxString& expression, clCxxWorkspace* workspace, const wxString& projectName,
+    const wxString& selConf, const wxString& fileName)
 {
     // add support for backticks commands
     wxString tmpExp;
@@ -488,85 +483,85 @@ wxString ExpandAllVariables(const wxString& expression,
     return DoExpandAllVariables(tmpExp, workspace, projectName, selConf, fileName);
 }
 
-wxString DoExpandAllVariables(const wxString& expression,
-    clCxxWorkspace* workspace,
-    const wxString& projectName,
-    const wxString& confToBuild,
-    const wxString& fileName)
+wxString DoExpandAllVariables(const wxString& expression, clCxxWorkspace* workspace, const wxString& projectName,
+    const wxString& confToBuild, const wxString& fileName)
 {
     wxString errMsg;
     wxString output(expression);
-    DollarEscaper de(output);
-    if(workspace) {
-        output.Replace(wxT("$(WorkspaceName)"), workspace->GetName());
-        ProjectPtr proj = workspace->FindProjectByName(projectName, errMsg);
-        if(proj) {
-            wxString project_name(proj->GetName());
 
-            // make sure that the project name does not contain any spaces
-            project_name.Replace(wxT(" "), wxT("_"));
+    size_t retries = 0;
+    wxString dummyname, dummfullname;
+    while((retries < 5) && MacroManager::Instance()->FindVariable(output, dummyname, dummyname)) {
+        ++retries;
+        DollarEscaper de(output);
+        if(workspace) {
+            output.Replace(wxT("$(WorkspaceName)"), workspace->GetName());
+            ProjectPtr proj = workspace->FindProjectByName(projectName, errMsg);
+            if(proj) {
+                wxString project_name(proj->GetName());
 
-            BuildConfigPtr bldConf = workspace->GetProjBuildConf(proj->GetName(), confToBuild);
-            output.Replace(
-                wxT("$(ProjectPath)"), proj->GetFileName().GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
-            output.Replace(wxT("$(WorkspacePath)"),
-                workspace->GetWorkspaceFileName().GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
-            output.Replace(wxT("$(ProjectName)"), project_name);
+                // make sure that the project name does not contain any spaces
+                project_name.Replace(wxT(" "), wxT("_"));
 
-            if(bldConf) {
-                output.Replace(wxT("$(ConfigurationName)"), bldConf->GetName());
+                BuildConfigPtr bldConf = workspace->GetProjBuildConf(proj->GetName(), confToBuild);
+                output.Replace(wxT("$(ProjectPath)"), proj->GetFileName().GetPath());
+                output.Replace(wxT("$(WorkspacePath)"), workspace->GetWorkspaceFileName().GetPath());
+                output.Replace(wxT("$(ProjectName)"), project_name);
 
-                // the IntermediateDirectory variable is special, since it can contains
-                // other variables in it.
-                wxString id(bldConf->GetIntermediateDirectory());
+                if(bldConf) {
+                    output.Replace(wxT("$(ConfigurationName)"), bldConf->GetName());
+                    output.Replace("$(OutputFile)", bldConf->GetOutputFileName());
 
-                // Substitute all macros from $(IntermediateDirectory)
-                id.Replace(
-                    wxT("$(ProjectPath)"), proj->GetFileName().GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
-                id.Replace(wxT("$(WorkspacePath)"),
-                    workspace->GetWorkspaceFileName().GetPath(wxPATH_GET_VOLUME | wxPATH_GET_SEPARATOR));
-                id.Replace(wxT("$(ProjectName)"), project_name);
-                id.Replace(wxT("$(ConfigurationName)"), bldConf->GetName());
+                    // the IntermediateDirectory variable is special, since it can contains
+                    // other variables in it.
+                    wxString id(bldConf->GetIntermediateDirectory());
 
-                output.Replace(wxT("$(IntermediateDirectory)"), id);
-                output.Replace(wxT("$(OutDir)"), id);
+                    // Substitute all macros from $(IntermediateDirectory)
+                    id.Replace(wxT("$(ProjectPath)"), proj->GetFileName().GetPath());
+                    id.Replace(wxT("$(WorkspacePath)"), workspace->GetWorkspaceFileName().GetPath());
+                    id.Replace(wxT("$(ProjectName)"), project_name);
+                    id.Replace(wxT("$(ConfigurationName)"), bldConf->GetName());
+
+                    output.Replace(wxT("$(IntermediateDirectory)"), id);
+                    output.Replace(wxT("$(OutDir)"), id);
+                }
+
+                if(output.Find(wxT("$(ProjectFiles)")) != wxNOT_FOUND)
+                    output.Replace(wxT("$(ProjectFiles)"), proj->GetFiles());
+
+                if(output.Find(wxT("$(ProjectFilesAbs)")) != wxNOT_FOUND)
+                    output.Replace(wxT("$(ProjectFilesAbs)"), proj->GetFiles(true));
             }
-
-            if(output.Find(wxT("$(ProjectFiles)")) != wxNOT_FOUND)
-                output.Replace(wxT("$(ProjectFiles)"), proj->GetFiles());
-
-            if(output.Find(wxT("$(ProjectFilesAbs)")) != wxNOT_FOUND)
-                output.Replace(wxT("$(ProjectFilesAbs)"), proj->GetFiles(true));
         }
+
+        if(fileName.IsEmpty() == false) {
+            wxFileName fn(fileName);
+
+            output.Replace(wxT("$(CurrentFileName)"), fn.GetName());
+
+            wxString fpath(fn.GetPath());
+            fpath.Replace(wxT("\\"), wxT("/"));
+            output.Replace(wxT("$(CurrentFilePath)"), fpath);
+            output.Replace(wxT("$(CurrentFileExt)"), fn.GetExt());
+
+            wxString ffullpath(fn.GetFullPath());
+            ffullpath.Replace(wxT("\\"), wxT("/"));
+            output.Replace(wxT("$(CurrentFileFullPath)"), ffullpath);
+            output.Replace(wxT("$(CurrentFileFullName)"), fn.GetFullName());
+        }
+
+        // exapnd common macros
+        wxDateTime now = wxDateTime::Now();
+        output.Replace(wxT("$(User)"), wxGetUserName());
+        output.Replace(wxT("$(Date)"), now.FormatDate());
+
+        if(workspace) {
+            output.Replace(wxT("$(CodeLitePath)"), workspace->GetStartupDir());
+        }
+
+        // call the environment & workspace variables expand function
+        output = EnvironmentConfig::Instance()->ExpandVariables(output, true);
     }
-
-    if(fileName.IsEmpty() == false) {
-        wxFileName fn(fileName);
-
-        output.Replace(wxT("$(CurrentFileName)"), fn.GetName());
-
-        wxString fpath(fn.GetPath());
-        fpath.Replace(wxT("\\"), wxT("/"));
-        output.Replace(wxT("$(CurrentFilePath)"), fpath);
-        output.Replace(wxT("$(CurrentFileExt)"), fn.GetExt());
-
-        wxString ffullpath(fn.GetFullPath());
-        ffullpath.Replace(wxT("\\"), wxT("/"));
-        output.Replace(wxT("$(CurrentFileFullPath)"), ffullpath);
-        output.Replace(wxT("$(CurrentFileFullName)"), fn.GetFullName());
-    }
-
-    // exapnd common macros
-    wxDateTime now = wxDateTime::Now();
-    output.Replace(wxT("$(User)"), wxGetUserName());
-    output.Replace(wxT("$(Date)"), now.FormatDate());
-
-    if(workspace) {
-        output.Replace(wxT("$(CodeLitePath)"), workspace->GetStartupDir());
-    }
-
-    // call the environment & workspace variables expand function
-    output = EnvironmentConfig::Instance()->ExpandVariables(output, true);
     return output;
 }
 
@@ -1667,6 +1662,17 @@ static bool search_process_by_command(const wxString& name, wxString& tty, long&
 
 void LaunchTerminalForDebugger(const wxString& title, wxString& tty, wxString& realPts, long& pid)
 {
+    static wxString SLEEP_COMMAND_BASE("");
+
+    // We can't rely on the terminal's string being "sleep" here:
+    // konsole's is the full path e.g. "/bin/sleep", which would never be found
+    if(SLEEP_COMMAND_BASE.empty()) {
+        ProcUtils::Locate("sleep", SLEEP_COMMAND_BASE);
+    }
+    if(SLEEP_COMMAND_BASE.empty()) {
+        SLEEP_COMMAND_BASE = "sleep"; // Sensible default, which might even work
+    }
+
     pid = wxNOT_FOUND;
     tty.Clear();
     realPts.Clear();
@@ -1689,12 +1695,32 @@ void LaunchTerminalForDebugger(const wxString& title, wxString& tty, wxString& r
     wxString secondsToSleep;
 
     secondsToSleep << (85765 + randomSeed);
+
     wxString SLEEP_COMMAND;
-    SLEEP_COMMAND << "sleep " << secondsToSleep;
+    SLEEP_COMMAND << SLEEP_COMMAND_BASE << " " << secondsToSleep;
 
     wxString consoleCommand = TERMINAL_CMD;
+
+    wxString separate;
+#ifdef __WXGTK__
+    wxString grepcommand("grep 'x-terminal-emulator\\|konsole' ");
+    grepcommand << consoleCommand.BeforeFirst('\'');
+    wxString CCcontents = ProcUtils::SafeExecuteCommand(grepcommand);
+    if(CCcontents.Contains("konsole") ||
+        (CCcontents.Contains("x-terminal-emulator") &&
+            CLRealPath(ProcUtils::SafeExecuteCommand("which x-terminal-emulator").Trim()).Contains("konsole"))) {
+        // konsole hangs when the debugger stops and we kill the contained 'sleep' instance, warning that 'sleep' has
+        // crashed.
+        // So we have to kill it manually. However by default konsole opens new instances of itself as threads of
+        // existing ones.
+        // That means that killing one 'instance' kills them all. The fix is to add --separate to the launch command.
+        separate = " '--separate'";
+    }
+#endif
+
     consoleCommand.Replace("$(CMD)", SLEEP_COMMAND);
     consoleCommand.Replace("$(TITLE)", title);
+    consoleCommand << separate;
     ::wxExecute(consoleCommand);
 
     // Let it start ... (wait for it up to 5 seconds)
@@ -1835,13 +1861,8 @@ wxString MakeExecInShellCommand(const wxString& cmd, const wxString& wd, bool wa
     return execLine;
 }
 
-wxStandardID PromptForYesNoDialogWithCheckbox(const wxString& message,
-    const wxString& dlgId,
-    const wxString& yesLabel,
-    const wxString& noLabel,
-    const wxString& checkboxLabel,
-    long style,
-    bool checkboxInitialValue)
+wxStandardID PromptForYesNoCancelDialogWithCheckbox(const wxString& message, const wxString& dlgId, const wxString& yesLabel,
+    const wxString& noLabel, const wxString& cancelLabel, const wxString& checkboxLabel, long style, bool checkboxInitialValue)
 {
     int res = clConfig::Get().GetAnnoyingDlgAnswer(dlgId, wxNOT_FOUND);
     if(res == wxNOT_FOUND) {
@@ -1849,7 +1870,12 @@ wxStandardID PromptForYesNoDialogWithCheckbox(const wxString& message,
         // User did not save his answer
         wxRichMessageDialog d(EventNotifier::Get()->TopFrame(), message, "CodeLite", style);
         d.ShowCheckBox(checkboxLabel);
-        d.SetYesNoLabels(yesLabel, noLabel);
+		if (cancelLabel.empty()) {
+			d.SetYesNoLabels(yesLabel, noLabel);
+		} else {
+			d.SetYesNoCancelLabels(yesLabel, noLabel, cancelLabel);
+		}
+			
         res = d.ShowModal();
         if(d.IsCheckBoxChecked() && (res != wxID_CANCEL)) {
             // store the user result
@@ -1857,6 +1883,14 @@ wxStandardID PromptForYesNoDialogWithCheckbox(const wxString& message,
         }
     }
     return static_cast<wxStandardID>(res);
+}
+
+wxStandardID PromptForYesNoDialogWithCheckbox(const wxString& message, const wxString& dlgId, const wxString& yesLabel,
+    const wxString& noLabel, const wxString& checkboxLabel, long style, bool checkboxInitialValue)
+{
+    return PromptForYesNoCancelDialogWithCheckbox(message, dlgId, yesLabel, noLabel, "",
+												  checkboxLabel, style, checkboxInitialValue
+												 );
 }
 
 static wxChar sPreviousChar(wxStyledTextCtrl* ctrl, int pos, int& foundPos, bool wantWhitespace)
@@ -2117,3 +2151,33 @@ IManager* clGetManager()
 }
 
 void clSetManager(IManager* manager) { s_pluginManager = manager; }
+
+#define BUFF_STATE_NORMAL 0
+#define BUFF_STATE_IN_ESC 1
+
+void clStripTerminalColouring(const wxString& buffer, wxString& modbuffer)
+{
+    modbuffer.Clear();
+    short state = BUFF_STATE_NORMAL;
+    wxString::const_iterator iter = buffer.begin();
+    for(; iter != buffer.end(); ++iter) {
+        wxChar ch = *iter;
+        if(ch == 7) continue; // BELL
+
+        switch(state) {
+        case BUFF_STATE_NORMAL:
+            if(ch == 0x1B) { // found ESC char
+                state = BUFF_STATE_IN_ESC;
+
+            } else {
+                modbuffer << ch;
+            }
+            break;
+        case BUFF_STATE_IN_ESC:
+            if(ch == 'm') { // end of color sequence
+                state = BUFF_STATE_NORMAL;
+            }
+            break;
+        }
+    }
+}
