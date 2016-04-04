@@ -228,4 +228,4 @@ Makefile
 *.txt
 Runtime/update64.bat
 LiteEditor.workspace
-*.project
+
