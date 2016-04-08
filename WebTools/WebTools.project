@@ -141,11 +141,6 @@
     <File Name="NodeJSPackageJSON.h"/>
     <File Name="NodeJSPackageJSON.cpp"/>
   </VirtualDirectory>
-  <VirtualDirectory Name="CSS">
-    <File Name="CSSCodeCompletion.h"/>
-    <File Name="CSSCodeCompletion.cpp"/>
-    <File Name="css.json"/>
-  </VirtualDirectory>
   <Settings Type="Dynamic Library">
     <GlobalSettings>
       <Compiler Options="" C_Options="" Assembler="">
