@@ -673,10 +673,12 @@ void QuickFindBar::OnFindNext(wxCommandEvent& e)
     CHECK_FOCUS_WIN();
 
     // Highlighted text takes precedence over the current search string
-    wxString selectedText = DoGetSelectedText();
-    if(selectedText.IsEmpty() == false) {
-        m_findWhat->ChangeValue(selectedText);
-        m_findWhat->SelectAll();
+    if (!IsShown()) {
+        wxString selectedText = DoGetSelectedText();
+        if(selectedText.IsEmpty() == false) {
+            m_findWhat->ChangeValue(selectedText);
+            m_findWhat->SelectAll();
+        }
     }
 
     DoSearch(kSearchForward);
@@ -687,10 +689,12 @@ void QuickFindBar::OnFindPrevious(wxCommandEvent& e)
     CHECK_FOCUS_WIN();
 
     // Highlighted text takes precedence over the current search string
-    wxString selectedText = DoGetSelectedText();
-    if(selectedText.IsEmpty() == false) {
-        m_findWhat->ChangeValue(selectedText);
-        m_findWhat->SelectAll();
+    if (!IsShown()) {
+        wxString selectedText = DoGetSelectedText();
+        if(selectedText.IsEmpty() == false) {
+            m_findWhat->ChangeValue(selectedText);
+            m_findWhat->SelectAll();
+        }
     }
 
     DoSearch(0);
@@ -776,6 +780,11 @@ void QuickFindBar::DoSelectAll(bool addMarkers)
     while(pos != wxNOT_FOUND) {
         std::pair<int, int> match;
         m_sci->GetSelection(&match.first, &match.second);
+        if(match.first == match.second) {
+            clGetManager()->SetStatusMessage(_("No match found"), 1);
+            return;
+        }
+        
         m_sci->SetCurrentPos(match.second);
         m_sci->SetSelectionStart(match.second);
         m_sci->SetSelectionEnd(match.second);

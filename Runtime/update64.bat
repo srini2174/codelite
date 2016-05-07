@@ -36,8 +36,8 @@ IF EXIST PHP.zip ( copy PHP.zip "%TARGET_DIR%\CodeLite\" )
 IF EXIST ..\WebTools\javascript-win.zip ( copy ..\WebTools\javascript-win.zip "%TARGET_DIR%\CodeLite\" )
 
 if "%WXWIN%" == "" GOTO OTHERS
-xcopy %WXWIN%\lib\gcc51_dll\wxmsw*u_*gcc_*.dll "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
-xcopy %WXWIN%\lib\gcc51_dll\wxbase*u_*gcc_*.dll "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
+xcopy %WXWIN%\lib\gcc510TDM_x64_dll\wxmsw*u_*gcc*_*.dll "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
+xcopy %WXWIN%\lib\gcc510TDM_x64_dll\wxbase*u_*gcc*_*.dll "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
 :: xcopy %WXWIN%\lib\gcc*_dll\wxrc.exe "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
 
 if "%COPY_WXC_RESOURCES%" == "1" (copy ..\wxcrafter\wxcrafter.accelerators  "%TARGET_DIR%\CodeLite\plugins\resources" )

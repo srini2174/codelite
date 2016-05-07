@@ -44,6 +44,7 @@ void FileExtManager::Init()
         m_map[wxT("cpp")] = TypeSourceCpp;
         m_map[wxT("cxx")] = TypeSourceCpp;
         m_map[wxT("c++")] = TypeSourceCpp;
+        m_map[wxT("as")] = TypeSourceCpp; // AngelScript files are handled as C++ source files in CodeLite
         m_map[wxT("c")] = TypeSourceC;
 
         m_map[wxT("h")] = TypeHeader;
@@ -143,6 +144,10 @@ void FileExtManager::Init()
 
         // #ifndef WORD
         m_matchers.push_back(Matcher::Ptr_t(new Matcher("#ifndef[ \t]+[a-zA-Z0-9_]+", TypeSourceCpp)));
+
+        // vim modlines
+        m_matchers.push_back(Matcher::Ptr_t(new Matcher("/\\* \\-\\*\\- Mode:[ \t]+c\\+\\+", TypeSourceCpp)));
+        m_matchers.push_back(Matcher::Ptr_t(new Matcher("# \\-\\*\\- Mode:[ \t]+python", TypePython)));
 
         // #include <
         m_matchers.push_back(Matcher::Ptr_t(new Matcher("#include[ \t]+[\\<\"]", TypeSourceCpp)));
