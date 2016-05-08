@@ -653,19 +653,12 @@ void CMakePlugin::OnExportMakefile(clBuildEvent& event)
         const wxString buildDirEsc = buildDir.GetPath(wxPATH_NO_SEPARATOR, wxPATH_UNIX);
         // Generated makefile
         content << "CMAKE      := \"" << cmake << "\"\n"
-<<<<<<< HEAD
-				"BUILD_DIR  := " << buildDirEsc << "\n"
-				"SOURCE_DIR := " << sourceDirEsc
-				<<"\n"
-                   "CMAKE_ARGS := " << CreateArguments(*settings, *m_configuration)
-=======
                                                   "BUILD_DIR  := "
                 << buildDirEsc << "\n"
                                   "SOURCE_DIR := "
                 << sourceDirEsc << "\n"
                                    "CMAKE_ARGS := "
                 << CreateArguments(*settings, *m_configuration)
->>>>>>> refs/remotes/eranif/master
                 << "\n"
                    "\n"
                    "# Building project(s)\n"
