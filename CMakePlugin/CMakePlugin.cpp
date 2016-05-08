@@ -201,8 +201,8 @@ CMakePlugin::CMakePlugin(IManager* manager)
     m_shortName = "CMakePlugin";
 
     // Create CMake configuration file
-    m_configuration.reset(new CMakeConfiguration(clStandardPaths::Get().GetUserDataDir() +
-                                                 wxFileName::GetPathSeparator() + "config/cmake.ini"));
+    m_configuration.reset(new CMakeConfiguration(
+        clStandardPaths::Get().GetUserDataDir() + wxFileName::GetPathSeparator() + "config/cmake.ini"));
 
     // Create cmake application
     m_cmake.reset(new CMake(m_configuration->GetProgramPath()));
@@ -385,8 +385,8 @@ void CMakePlugin::HookPopupMenu(wxMenu* menu, MenuType type)
 
 /* ************************************************************************ */
 
-void
-CMakePlugin::HookProjectSettingsTab(wxBookCtrlBase* notebook, const wxString& projectName, const wxString& configName)
+void CMakePlugin::HookProjectSettingsTab(
+    wxBookCtrlBase* notebook, const wxString& projectName, const wxString& configName)
 {
     wxASSERT(notebook);
 
@@ -419,8 +419,8 @@ CMakePlugin::HookProjectSettingsTab(wxBookCtrlBase* notebook, const wxString& pr
 
 /* ************************************************************************ */
 
-void
-CMakePlugin::UnHookProjectSettingsTab(wxBookCtrlBase* notebook, const wxString& projectName, const wxString& configName)
+void CMakePlugin::UnHookProjectSettingsTab(
+    wxBookCtrlBase* notebook, const wxString& projectName, const wxString& configName)
 {
     // The configName is empty :(
     wxASSERT(notebook);
@@ -490,9 +490,8 @@ void CMakePlugin::OpenCMakeLists(wxFileName filename) const
     filename.SetFullName(CMAKELISTS_FILE);
 
     if(!m_mgr->OpenFile(filename.GetFullPath()))
-        wxMessageBox("Unable to open \"" + filename.GetFullPath() + "\"",
-                     wxMessageBoxCaptionStr,
-                     wxOK | wxCENTER | wxICON_ERROR);
+        wxMessageBox("Unable to open \"" + filename.GetFullPath() + "\"", wxMessageBoxCaptionStr,
+            wxOK | wxCENTER | wxICON_ERROR);
 }
 
 /* ************************************************************************ */
@@ -599,9 +598,10 @@ void CMakePlugin::OnExportMakefile(clBuildEvent& event)
 
         // Parent project not found
         if(!settings || !settings->enabled) {
-            CL_ERROR("Unable to find or not enabled parent project "
-                     "'" +
-                     parentProject + "' for project '" + project + "'");
+            CL_ERROR(
+                "Unable to find or not enabled parent project "
+                "'" +
+                parentProject + "' for project '" + project + "'");
             return;
         }
 
@@ -614,17 +614,19 @@ void CMakePlugin::OnExportMakefile(clBuildEvent& event)
 
         // Redirect make to the parent project
         content << "# Parent project\n"
-                   "PARENT          := " << parentProjectDirEsc << "\n"
-                                                                   "PARENT_MAKEFILE := " << parentProject
-                << ".mk\n"
-                   "\n"
-                   "all:\n"
-                   "\t$(MAKE) -C \"$(PARENT)\" -f \"$(PARENT_MAKEFILE)\" " << project
-                << "\n"
-                   "\n"
-                   "clean:\n"
-                   "\t$(MAKE) -C \"$(PARENT)\" -f \"$(PARENT_MAKEFILE)\" " << project << " clean\n"
-                                                                                         "\n";
+                   "PARENT          := "
+                << parentProjectDirEsc << "\n"
+                                          "PARENT_MAKEFILE := "
+                << parentProject << ".mk\n"
+                                    "\n"
+                                    "all:\n"
+                                    "\t$(MAKE) -C \"$(PARENT)\" -f \"$(PARENT_MAKEFILE)\" "
+                << project << "\n"
+                              "\n"
+                              "clean:\n"
+                              "\t$(MAKE) -C \"$(PARENT)\" -f \"$(PARENT_MAKEFILE)\" "
+                << project << " clean\n"
+                              "\n";
 
     } else {
 
@@ -651,10 +653,19 @@ void CMakePlugin::OnExportMakefile(clBuildEvent& event)
         const wxString buildDirEsc = buildDir.GetPath(wxPATH_NO_SEPARATOR, wxPATH_UNIX);
         // Generated makefile
         content << "CMAKE      := \"" << cmake << "\"\n"
+<<<<<<< HEAD
 				"BUILD_DIR  := " << buildDirEsc << "\n"
 				"SOURCE_DIR := " << sourceDirEsc
 				<<"\n"
                    "CMAKE_ARGS := " << CreateArguments(*settings, *m_configuration)
+=======
+                                                  "BUILD_DIR  := "
+                << buildDirEsc << "\n"
+                                  "SOURCE_DIR := "
+                << sourceDirEsc << "\n"
+                                   "CMAKE_ARGS := "
+                << CreateArguments(*settings, *m_configuration)
+>>>>>>> refs/remotes/eranif/master
                 << "\n"
                    "\n"
                    "# Building project(s)\n"
