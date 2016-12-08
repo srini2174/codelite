@@ -236,6 +236,10 @@ void MainBook::OnWorkspaceClosed(wxCommandEvent& e)
 {
     e.Skip();
     CloseAll(false); // make sure no unsaved files
+    clStatusBar* sb = clGetManager()->GetStatusBar();
+    if(sb) {
+        sb->SetSourceControlBitmap(wxNullBitmap, "", "");
+    }
 }
 
 bool MainBook::AskUserToSave(LEditor* editor)
@@ -375,7 +379,6 @@ void MainBook::GetAllEditors(LEditor::Vec_t& editors, size_t flags)
                 }
             }
         } else {
-            std::vector<wxWindow*> windows;
             for(size_t i = 0; i < m_book->GetPageCount(); i++) {
                 LEditor* editor = dynamic_cast<LEditor*>(m_book->GetPage(i));
                 if(editor) {
@@ -498,12 +501,9 @@ static bool IsFileExists(const wxFileName& filename)
 #endif
 }
 
-LEditor* MainBook::OpenFile(const wxString& file_name,
-    const wxString& projectName,
-    int lineno,
-    long position,
-    OF_extra extra /*=OF_AddJump*/,
-    bool preserveSelection /*=true*/)
+LEditor* MainBook::OpenFile(const wxString& file_name, const wxString& projectName, int lineno, long position,
+    OF_extra extra /*=OF_AddJump*/, bool preserveSelection /*=true*/, const wxBitmap& bmp /*= wxNullBitmap*/,
+    const wxString& tooltip /* wxEmptyString */)
 {
     wxFileName fileName(file_name);
     fileName.MakeAbsolute();
@@ -560,13 +560,15 @@ LEditor* MainBook::OpenFile(const wxString& file_name,
         if(m_book->GetPageCount() == 0) hidden = GetSizer()->Hide(m_book);
 
         editor = new LEditor(m_book);
+        editor->SetEditorBitmap(bmp);
         editor->Create(projName, fileName);
 
         int sel = m_book->GetSelection();
         if((extra & OF_PlaceNextToCurrent) && (sel != wxNOT_FOUND)) {
-            AddPage(editor, fileName.GetFullName(), fileName.GetFullPath(), wxNullBitmap, false, sel + 1);
+            AddPage(editor, fileName.GetFullName(), tooltip.IsEmpty() ? fileName.GetFullPath() : tooltip, bmp, false,
+                sel + 1);
         } else {
-            AddPage(editor, fileName.GetFullName(), fileName.GetFullPath());
+            AddPage(editor, fileName.GetFullName(), tooltip.IsEmpty() ? fileName.GetFullPath() : tooltip, bmp);
         }
         editor->SetSyntaxHighlight();
 
@@ -631,15 +633,10 @@ LEditor* MainBook::OpenFile(const wxString& file_name,
     return editor;
 }
 
-bool MainBook::AddPage(wxWindow* win,
-    const wxString& text,
-    const wxString& tooltip,
-    const wxBitmap& bmp,
-    bool selected,
+bool MainBook::AddPage(wxWindow* win, const wxString& text, const wxString& tooltip, const wxBitmap& bmp, bool selected,
     int insert_at_index /*=wxNOT_FOUND*/)
 {
     if(m_book->GetPageIndex(win) != wxNOT_FOUND) return false;
-
     long MaxBuffers = clConfig::Get().Read(kConfigMaxOpenedTabs, 15);
     bool closeLastTab = ((long)(m_book->GetPageCount()) >= MaxBuffers) && GetUseBuffereLimit();
     if(insert_at_index == wxNOT_FOUND) {
@@ -1048,14 +1045,18 @@ void MainBook::MarkEditorReadOnly(LEditor* editor)
             wxOK | wxCENTER | wxICON_WARNING, this);
         return;
     }
+    
 #if !CL_USE_NATIVEBOOK
+    wxBitmap lockBmp = ::clGetManager()->GetStdIcons()->LoadBitmap("lock");
     for(size_t i = 0; i < m_book->GetPageCount(); i++) {
+        wxBitmap orig_bmp = editor->GetEditorBitmap();
         if(editor == m_book->GetPage(i)) {
-            m_book->SetPageBitmap(i, readOnly ? wxXmlResource::Get()->LoadBitmap(wxT("read_only")) : wxNullBitmap);
+            m_book->SetPageBitmap(i, readOnly ? lockBmp : orig_bmp);
             break;
         }
     }
 #endif
+
 }
 
 long MainBook::GetBookStyle() { return 0; }
@@ -1094,13 +1095,8 @@ bool MainBook::DoSelectPage(wxWindow* win)
     return true;
 }
 
-void MainBook::ShowMessage(const wxString& message,
-    bool showHideButton,
-    const wxBitmap& bmp,
-    const ButtonDetails& btn1,
-    const ButtonDetails& btn2,
-    const ButtonDetails& btn3,
-    const CheckboxDetails& cb)
+void MainBook::ShowMessage(const wxString& message, bool showHideButton, const wxBitmap& bmp, const ButtonDetails& btn1,
+    const ButtonDetails& btn2, const ButtonDetails& btn3, const CheckboxDetails& cb)
 {
     m_messagePane->ShowMessage(message, showHideButton, bmp, btn1, btn2, btn3, cb);
     clMainFrame::Get()->SendSizeEvent();
@@ -1433,4 +1429,20 @@ bool MainBook::ClosePage(IEditor* editor, bool prompt)
     if(!page) return false;
     int pos = m_book->GetPageIndex(page);
     return (pos != wxNOT_FOUND) && (m_book->DeletePage(pos, false));
+}
+
+void MainBook::GetDetachedTabs(clTab::Vec_t& tabs)
+{
+    // Make sure that modified detached editors are also enabling the "Save" and "Save All" button
+    const EditorFrame::List_t& detachedEditors = GetDetachedEditors();
+    std::for_each(detachedEditors.begin(), detachedEditors.end(), [&](EditorFrame* fr) {
+        clTab tabInfo;
+        tabInfo.bitmap = wxNullBitmap;
+        tabInfo.filename = fr->GetEditor()->GetFileName();
+        tabInfo.isFile = true;
+        tabInfo.isModified = fr->GetEditor()->IsModified();
+        tabInfo.text = fr->GetEditor()->GetFileName().GetFullPath();
+        tabInfo.window = fr->GetEditor();
+        tabs.push_back(tabInfo);
+    });
 }

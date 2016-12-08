@@ -30,6 +30,7 @@
 #include "wxFlatButton.h"
 #include <wx/combobox.h>
 #include "wxFlatButtonBar.h"
+#include "clEditorEditEventsHandler.h"
 
 class QuickFindBarOptionsMenu;
 class wxStyledTextCtrl;
@@ -65,10 +66,10 @@ public:
 
 protected:
     wxStyledTextCtrl* m_sci;
-    size_t m_flags;
     wxString m_lastText;
     wchar_t* m_lastTextPtr;
     bool m_eventsConnected;
+    bool m_onNextPrev;
     QuickFindBarOptionsMenu* m_optionsWindow;
     wxComboBox* m_findWhat;
     wxComboBox* m_replaceWith;
@@ -77,6 +78,8 @@ protected:
     wxFlatButton* m_caseSensitive;
     wxFlatButton* m_wholeWord;
     wxFlatButton* m_regexOrWildButton;
+    wxFlatButton* m_highlightOccurrences;
+    wxStaticText* m_matchesFound;
     wxButton* m_buttonReplace;
     wxButton* m_buttonReplaceAll;
     wxButton* btnPrev;
@@ -86,9 +89,11 @@ protected:
     wxFlatButton* m_replaceInSelectionButton;
     clNoMatchBitmap* m_noMatchBmp;
     eRegexType m_regexType;
-    bool m_replaceInSelection;
     bool m_disableTextUpdateEvent;
     friend class QuickFindBarOptionsMenu;
+
+    clEditEventsHandler::Ptr_t m_findEventsHandler;
+    clEditEventsHandler::Ptr_t m_replaceEventsHandler;
 
 public:
     enum {
@@ -116,11 +121,13 @@ private:
 
 protected:
     virtual void OnReplaceKeyDown(wxKeyEvent& event);
+    virtual void OnFindKeyDown(wxKeyEvent& event);
     void DoSearch(size_t searchFlags);
     void DoSetCaretAtEndOfText();
     void DoFixRegexParen(wxString& findwhat);
     wxString DoGetSelectedText();
     void DoSelectAll(bool addMarkers);
+    void DoHighlightMatches(bool checked);
 
     // General events
     void OnUndo(wxCommandEvent& e);
@@ -160,7 +167,7 @@ protected:
     void OnReplaceInSelectionUI(wxUpdateUIEvent& event);
     void OnQuickFindCommandEvent(wxCommandEvent& event);
     void OnReceivingFocus(wxFocusEvent& event);
-    void OnReleaseEditor(wxCommandEvent& e);
+    void OnReleaseEditor(clFindEvent& e);
 
     void OnFindNext(wxCommandEvent& e);
     void OnFindPrevious(wxCommandEvent& e);

@@ -2,6 +2,7 @@
 #include "globals.h"
 #include "workspace.h"
 
+#define CMAKE_BUILD_FOLDER_PREFIX "cmake-build-"
 CMakeBuilder::CMakeBuilder()
     : Builder("CMake")
 {
@@ -76,12 +77,12 @@ wxString CMakeBuilder::GetPreprocessFileCmd(const wxString& project, const wxStr
     return wxEmptyString;
 }
 
-wxString CMakeBuilder::GetWorkspaceBuildFolder(bool wrapWithQuotes) const
+wxString CMakeBuilder::GetWorkspaceBuildFolder(bool wrapWithQuotes)
 {
     wxFileName fn = clCxxWorkspaceST::Get()->GetFileName();
     wxString workspaceConfig = clCxxWorkspaceST::Get()->GetBuildMatrix()->GetSelectedConfigurationName();
 
-    fn.AppendDir(workspaceConfig);
+    fn.AppendDir(CMAKE_BUILD_FOLDER_PREFIX + workspaceConfig);
     wxString folder = fn.GetPath();
     if(wrapWithQuotes) {
         ::WrapWithQuotes(folder);
@@ -89,17 +90,18 @@ wxString CMakeBuilder::GetWorkspaceBuildFolder(bool wrapWithQuotes) const
     return folder;
 }
 
-wxString CMakeBuilder::GetProjectBuildFolder(const wxString& project, bool wrapWithQuotes) const
+wxString CMakeBuilder::GetProjectBuildFolder(const wxString& project, bool wrapWithQuotes)
 {
     ProjectPtr p = clCxxWorkspaceST::Get()->GetProject(project);
     wxASSERT(p);
 
     wxFileName fnProject = p->GetFileName();
     wxFileName fnWorkspace = clCxxWorkspaceST::Get()->GetFileName();
-    wxString workspaceConfig = clCxxWorkspaceST::Get()->GetBuildMatrix()->GetSelectedConfigurationName();
-    fnWorkspace.AppendDir(workspaceConfig);
-
     fnProject.MakeRelativeTo(fnWorkspace.GetPath());
+
+    wxString workspaceConfig = clCxxWorkspaceST::Get()->GetBuildMatrix()->GetSelectedConfigurationName();
+    fnWorkspace.AppendDir(CMAKE_BUILD_FOLDER_PREFIX + workspaceConfig);
+
     wxString folder;
     folder = fnWorkspace.GetPath();
     folder << wxFileName::GetPathSeparator() << fnProject.GetPath();
@@ -120,4 +122,10 @@ wxString CMakeBuilder::GetBuildToolCommand(const wxString& project, const wxStri
 
     wxString buildTool = compiler->GetTool("MAKE");
     return buildTool + " -e ";
+}
+wxString CMakeBuilder::GetOutputFile() const
+{
+    wxChar sep = wxFileName::GetPathSeparator();
+    return wxString() << "$(WorkspacePath)" << sep << CMAKE_BUILD_FOLDER_PREFIX << "$(WorkspaceConfiguration)" << sep
+                      << "bin" << sep << "$(ProjectName)";
 }

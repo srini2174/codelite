@@ -65,13 +65,21 @@ set( WITH_SFTP 1 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations") # Avoid very multiple warnings spam due to deprecated wx methods
 
+if( UNIX AND NOT APPLE)
+	if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+		set(CMAKE_LIBRARY_ARCHITECTURE "x86_64-linux-gnu")
+	else()
+		set(CMAKE_LIBRARY_ARCHITECTURE "i386-linux-gnu")
+	endif()
+endif()
+
 if ( UNIX )
-	# Configure CCache if available
-	find_program(CCACHE_FOUND ccache)
-	if (CCACHE_FOUND)
-		set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-		set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
-	endif(CCACHE_FOUND)
+    # Configure CCache if available
+    find_program(CCACHE_FOUND ccache)
+    if (CCACHE_FOUND)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+        set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+    endif(CCACHE_FOUND)
 endif(UNIX)
 
 if ( UNIX )
@@ -209,6 +217,29 @@ if ( WITH_SFTP )
     endif ( UNIX AND NOT APPLE OR MINGW )
     message("-- LIBSSH_LIB is set to ${LIBSSH_LIB}")
 endif ( WITH_SFTP )
+
+## On UNIX we require GTK
+if (UNIX AND NOT APPLE)
+    if (GTK_VERSION EQUAL 3)
+        set(OLD_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}) # Cache the current value
+        set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+        find_package(GTK3)
+        set(CMAKE_MODULE_PATH ${OLD_CMAKE_MODULE_PATH}) # Reset, else the official path isn't used again :/
+        if (GTK3_FOUND)
+            include_directories(${GTK3_INCLUDE_DIRS})
+        else (GTK3_FOUND)
+            message(FATAL_ERROR "Could not locate GTK.")
+        endif (GTK3_FOUND)
+    else()
+        find_package(GTK2)
+        if (GTK2_FOUND)
+            include_directories(${GTK2_INCLUDE_DIRS})
+        else (GTK2_FOUND)
+            message(FATAL_ERROR "Could not locate GTK.")
+        endif (GTK2_FOUND)
+    endif()
+
+endif (UNIX AND NOT APPLE)
 
 ## enable clang support?
 if(ENABLE_CLANG MATCHES 0)
@@ -358,6 +389,7 @@ unset(PREVENT_WX_ASSERTS CACHE)
 
 set(ARCH 32)
 set(ARCH_NAME i386)
+set(OS_CODENAME "unknown")
 
 if ( UNIX AND NOT APPLE )
     execute_process(COMMAND /bin/sh -c "lsb_release -a|grep -i Codename | cut -d: -f2"    OUTPUT_VARIABLE OS_CODENAME OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
@@ -369,9 +401,16 @@ if ( UNIX AND NOT APPLE )
     string(REPLACE "\t" "" DISTRO_CODENAME "${DISTRO_CODENAME}")
     string(TOLOWER ${DISTRO_CODENAME} DISTRO_CODENAME)
 
+    string(REPLACE " " "" OS_CODENAME "${OS_CODENAME}")
+    string(REPLACE "\t" "" OS_CODENAME "${OS_CODENAME}")
+    if(NOT "${OS_CODENAME}" STREQUAL "") # It'll be empty if lsb_release isn't installed, which causes cmake to error out on the next line
+        string(TOLOWER ${OS_CODENAME} OS_CODENAME)
+    endif()
+
     set(CPACK_SYSTEM_NAME "${DISTRO_CODENAME}")
     message("-- CPACK_SYSTEM_NAME ${CPACK_SYSTEM_NAME}")
 endif ( UNIX AND NOT APPLE )
+message("-- OS_CODENAME is set to ${OS_CODENAME}")
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(ARCH 64)
@@ -396,17 +435,26 @@ if ( MAKE_DEB )
 
     set(CPACK_GENERATOR                   "DEB")
     set(CPACK_PACKAGE_NAME                "CodeLite")
-    set(CPACK_PACKAGE_VERSION             "9.1.6")
+    set(CPACK_PACKAGE_VERSION             "9.2.8")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER   "Eran Ifrah <eran.ifrah@gmail.com>")
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "C/C++/PHP and Node.js IDE (Integrated Development Environment)")
     set(CPACK_DEBIAN_PACKAGE_SECTION      "devel")
     set(CPACK_DEBIAN_PACKAGE_PRIORITY     "optional")
     set(CPACK_DEBIAN_PACKAGE_RECOMMENDS   "build-essential, git, subversion, gdb, xterm, gcc, g++")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS      "libc6, libgtk2.0-dev, libsqlite3-dev, libssh-dev, libedit-dev, libhunspell-dev, libclang-3.5-dev, clang-format-3.5, liblldb-3.5-dev")
+    if(OS_CODENAME STREQUAL "xenial")
+        message("-- CPack deps for Ubuntu-Xenial")
+        set(CPACK_DEBIAN_PACKAGE_DEPENDS      
+            "libc6, libgtk2.0-dev, libsqlite3-dev, libssh-dev, libedit-dev, libhunspell-dev, libclang-3.8-dev, clang-format-3.8, liblldb-3.8-dev")
+    else()
+        message("-- CPack deps for Ubuntu-Trusty/Debian-Jessie")
+        set(CPACK_DEBIAN_PACKAGE_DEPENDS
+            "libc6, libgtk2.0-dev, libsqlite3-dev, libssh-dev, libedit-dev, libhunspell-dev, libclang-3.5-dev, clang-format-3.5, liblldb-3.5-dev")
+    endif()
     set(CPACK_PACKAGE_DESCRIPTION_FILE    "${CL_SRC_ROOT}/DESC")
     set(CPACK_STRIP_FILES TRUE)
     INCLUDE(CPack)
 endif( MAKE_DEB )
+
 
 ############################################
 ## Clang support
@@ -510,9 +558,9 @@ add_subdirectory(sdk/wxshapeframework)
 add_subdirectory(sdk/databaselayer)
 add_subdirectory(CodeLite)
 add_subdirectory(Plugin)
-add_subdirectory(abbreviation)
 
-if ( NOT NO_CPP_PLUGINS )
+if(NOT NO_CORE_PLUGINS)
+    add_subdirectory(abbreviation)
     add_subdirectory(CallGraph)
     add_subdirectory(ContinuousBuild)
     add_subdirectory(Debugger)
@@ -523,55 +571,61 @@ if ( NOT NO_CPP_PLUGINS )
     add_subdirectory(cppchecker)
     add_subdirectory(cscope)
     add_subdirectory(wxformbuilder)
-    
-if ( UNIX AND NOT APPLE )
-    ## Add valgrind plugin
-    add_subdirectory(MemCheck)
-endif ( UNIX AND NOT APPLE )
+    add_subdirectory(Tweaks)
+    add_subdirectory(CodeFormatter)
+    add_subdirectory(Copyright)
+    add_subdirectory(DatabaseExplorer)
+    add_subdirectory(ExternalTools)
+    add_subdirectory(SnipWiz)
+    add_subdirectory(Subversion2)
+    add_subdirectory(ZoomNavigator)
+    add_subdirectory(git)
+    add_subdirectory(CMakePlugin)
+    add_subdirectory(CodeLiteDiff)
+    add_subdirectory(SpellChecker)
+    add_subdirectory(AutoSave)
+    add_subdirectory(Tail)
+    add_subdirectory(EditorConfigPlugin)
 
-    if(IS_DIRECTORY "${CL_SRC_ROOT}/wxcrafter")
-        add_subdirectory(wxcrafter)
+    if (WITH_SFTP)
+        add_subdirectory(SFTP)
+    endif(WITH_SFTP)
+
+    if (WITH_LLDB)
+        add_subdirectory(LLDBDebugger)
     endif()
-
-    if ( APPLE )
+    
+    add_subdirectory(codelitephp)
+    add_subdirectory(WordCompletion)
+    add_subdirectory(HelpPlugin)
+    add_subdirectory(WebTools)
+    
+    if(UNIX AND NOT APPLE)
+        ## Add valgrind plugin
+        add_subdirectory(MemCheck)
+    endif(UNIX AND NOT APPLE)
+    
+    if(APPLE)
         message("-- Adding MacBundler...")
         add_subdirectory(MacBundler)
-    endif ( APPLE )
-endif ( NOT NO_CPP_PLUGINS )
+    endif(APPLE)
+endif(NOT NO_CORE_PLUGINS)
 
-add_subdirectory(Tweaks)
-add_subdirectory(CodeFormatter)
-add_subdirectory(Copyright)
-add_subdirectory(DatabaseExplorer)
-add_subdirectory(ExternalTools)
-add_subdirectory(SnipWiz)
-add_subdirectory(Subversion2)
-add_subdirectory(ZoomNavigator)
-add_subdirectory(git)
-add_subdirectory(CMakePlugin)
-add_subdirectory(CodeLiteDiff)
-add_subdirectory(SpellChecker)
-
-if (WITH_SFTP)
-    add_subdirectory(SFTP)
-endif(WITH_SFTP)
-
-if (WITH_LLDB)
-    add_subdirectory(LLDBDebugger)
+# wxCrafter is not a core plugin so we include it we find the directory
+if(IS_DIRECTORY "${CL_SRC_ROOT}/wxcrafter")
+    add_subdirectory(wxcrafter)
 endif()
-add_subdirectory(codelitephp)
-add_subdirectory(WordCompletion)
-add_subdirectory(HelpPlugin)
-## Executables
-add_subdirectory(LiteEditor)
-add_subdirectory(codelitegcc)
-add_subdirectory(codelite_make)
-add_subdirectory(codelite_terminal)
-add_subdirectory(sdk/codelite_indexer)
-add_subdirectory(sdk/codelite_cppcheck)
-add_subdirectory(codelite_echo)
-add_subdirectory(WebTools)
 
+## Executables
+if(NOT SDK_ONLY)
+    add_subdirectory(LiteEditor)
+    add_subdirectory(codelitegcc)
+    add_subdirectory(codelite_make)
+    add_subdirectory(codelite_terminal)
+    add_subdirectory(sdk/codelite_indexer)
+    add_subdirectory(sdk/codelite_cppcheck)
+    add_subdirectory(codelite_echo)
+endif()
 ##
 ## Setup the proper dependencies
 ##
@@ -586,7 +640,10 @@ add_dependencies(databaselayersqlite wxsqlite3)
 add_dependencies(wxshapeframework wxsqlite3)
 add_dependencies(libcodelite wxshapeframework databaselayersqlite wxsqlite3)
 add_dependencies(plugin libcodelite)
-add_dependencies(codelite plugin)
+
+if(NOT SDK_ONLY)
+    add_dependencies(codelite plugin)
+endif()
 
 ## Include our custom plugin.cmake module
 include(plugin)

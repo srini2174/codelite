@@ -93,6 +93,10 @@
     <File Name="clFontHelper.h"/>
     <File Name="clFontHelper.cpp"/>
     <File Name="macros.h"/>
+    <File Name="clBitmap.h"/>
+    <File Name="clBitmap.cpp"/>
+    <File Name="clEditorConfig.h"/>
+    <File Name="clEditorConfig.cpp"/>
   </VirtualDirectory>
   <VirtualDirectory Name="Header Files">
     <File Name="y.tab.h"/>
@@ -254,6 +258,10 @@
       <File Name="CxxScannerBase.cpp"/>
       <File Name="CxxTemplateFunction.h"/>
       <File Name="CxxTemplateFunction.cpp"/>
+      <File Name="CxxVariableScanner.cpp"/>
+      <File Name="CxxVariableScanner.h"/>
+      <File Name="CxxVariable.h"/>
+      <File Name="CxxVariable.cpp"/>
     </VirtualDirectory>
   </VirtualDirectory>
   <VirtualDirectory Name="RefactorEngine">
@@ -335,6 +343,8 @@
     <File Name="PHPEntityKeyword.cpp"/>
     <File Name="PHPEntityFunctionAlias.h"/>
     <File Name="PHPEntityFunctionAlias.cpp"/>
+    <File Name="PHPDocVar.h"/>
+    <File Name="PHPDocVar.cpp"/>
   </VirtualDirectory>
   <VirtualDirectory Name="wxcrafter">
     <File Name="TerminalEmulatorUI.wxcp"/>
@@ -595,4 +605,8 @@ PhpLexer.cpp: PhpLexer.l
   <Dependencies Name="Win_x64_Debug"/>
   <Dependencies Name="Win_x64_Release"/>
   <Dependencies Name="Win_x86_Release"/>
+  <VirtualDirectory Name="FileSystemWatcher">
+    <File Name="clFileSystemWatcher.h"/>
+    <File Name="clFileSystemWatcher.cpp"/>
+  </VirtualDirectory>
 </CodeLite_Project>

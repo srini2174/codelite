@@ -62,7 +62,7 @@ class WXDLLIMPEXP_SDK ProjectItem
 {
 public:
     // The visible items
-    enum { TypeVirtualDirectory, TypeProject, TypeFile, TypeWorkspace };
+    enum { TypeVirtualDirectory, TypeProject, TypeFile, TypeWorkspace, TypeWorkspaceFolder };
 
 public:
     wxString m_key;
@@ -177,11 +177,13 @@ private:
     clCxxWorkspace* m_workspace;
     ProjectSettingsPtr m_settings;
     wxString m_iconPath; /// Not serializable
+    wxArrayString m_cachedIncludePaths;
+    wxString m_workspaceFolder; // The folder in which this project is contained. Separated by "/"
 
 private:
     void DoUpdateProjectSettings();
-    wxArrayString
-    DoGetCompilerOptions(bool cxxOptions, bool clearCache = false, bool noDefines = true, bool noIncludePaths = true);
+    wxArrayString DoGetCompilerOptions(
+        bool cxxOptions, bool clearCache = false, bool noDefines = true, bool noIncludePaths = true);
 
 public:
     // -----------------------------------------
@@ -233,6 +235,11 @@ public:
     clCxxWorkspace* GetWorkspace();
 
     /**
+     * @brief clear the include path cache
+     */
+    void ClearIncludePathCache();
+
+    /**
      * @brief a project was renamed - update our dependeices if needed
      */
     void ProjectRenamed(const wxString& oldname, const wxString& newname);
@@ -278,13 +285,13 @@ public:
     // default constructor
     Project();
     virtual ~Project();
-    
+
     /**
      * @brief return list of macros used in the configuration which could not be resolved
      * by CodeLite
      */
     void GetUnresolvedMacros(const wxString& configName, wxArrayString& vars) const;
-    
+
     /**
      * \return project name
      */
@@ -449,21 +456,15 @@ public:
      * Get the project's file toplevel directory, extensions, ignorefiles, exclude paths and regexes for use when
      * reconciling with filesystem reality
      */
-    void GetReconciliationData(wxString& toplevelDir,
-                               wxString& extensions,
-                               wxArrayString& ignoreFiles,
-                               wxArrayString& excludePaths,
-                               wxArrayString& regexes);
+    void GetReconciliationData(wxString& toplevelDir, wxString& extensions, wxArrayString& ignoreFiles,
+        wxArrayString& excludePaths, wxArrayString& regexes);
 
     /**
      * Set the project's file toplevel directory, extensions, ignorefiles, exclude paths and regexes for use when
      * reconciling with filesystem reality
      */
-    void SetReconciliationData(const wxString& toplevelDir,
-                               const wxString& extensions,
-                               const wxArrayString& ignoreFiles,
-                               const wxArrayString& excludePaths,
-                               wxArrayString& regexes);
+    void SetReconciliationData(const wxString& toplevelDir, const wxString& extensions,
+        const wxArrayString& ignoreFiles, const wxArrayString& excludePaths, wxArrayString& regexes);
     //-----------------------------------
     // visual operations
     //-----------------------------------
@@ -590,7 +591,7 @@ public:
      * The include paths are returned as an array in the order they appear in the
      * project settings
      */
-    wxArrayString GetIncludePaths(bool clearCache = false);
+    wxArrayString GetIncludePaths();
 
     /**
      * @brief return the pre-processors for this project.
@@ -647,13 +648,16 @@ public:
      * @param fileName the fullpath of the file
      * @param virtualDirPath virtual folder path (a:b:c)
      */
-    void
-    SetExcludeConfigForFile(const wxString& filename, const wxString& virtualDirPath, const wxArrayString& configs);
+    void SetExcludeConfigForFile(
+        const wxString& filename, const wxString& virtualDirPath, const wxArrayString& configs);
 
     /**
      * @brief add this project files into the 'compile_commands' json object
      */
     void CreateCompileCommandsJSON(JSONElement& compile_commands);
+
+    void SetWorkspaceFolder(const wxString& workspaceFolders) { this->m_workspaceFolder = workspaceFolders; }
+    const wxString& GetWorkspaceFolder() const { return m_workspaceFolder; }
 
     /**
      * @brief return the build configuration
@@ -661,12 +665,12 @@ public:
      * that matches the current workspace configuration
      */
     BuildConfigPtr GetBuildConfiguration(const wxString& configName = "") const;
-    
+
     /**
      * @brief clear the backtick expansion info
      */
     static void ClearBacktickCache();
-    
+
 private:
     /**
      * @brief associate this project with a workspace
@@ -717,6 +721,12 @@ public:
     wxString m_cmpType;        //< Project compiler type
     wxString m_debuggerType;   //< Selected debugger
     wxString m_sourceTemplate; //< The template selected by the user in the wizard
+    wxString m_builderName;    //< The builder to use for this project
+
+    ProjectData()
+        : m_builderName("Default")
+    {
+    }
 };
 
 //-----------------------------------------------------------------

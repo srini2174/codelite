@@ -28,12 +28,14 @@
 
 #include "codelite_exports.h"
 #include "PHPEntityBase.h" // Base class: PHPEntityBase
+#include "PHPDocVar.h"
 
 class WXDLLIMPEXP_CL PHPEntityClass : public PHPEntityBase
 {
     wxString m_extends;
     wxArrayString m_implements;
     wxArrayString m_traits;
+    PHPDocVar::List_t m_varPhpDocs; // List of @var defined inside the class body
 
 public:
     virtual wxString FormatPhpDoc() const;
@@ -61,11 +63,17 @@ public:
     wxString GetImplementsAsString() const { return ::wxJoin(m_implements, ';'); }
     wxString GetTraitsAsString() const { return ::wxJoin(m_traits, ';'); }
 
+    const PHPDocVar::List_t& GetVarPhpDocs() const { return m_varPhpDocs; }
+    PHPDocVar::List_t& GetVarPhpDocs() { return m_varPhpDocs; }
+    void AddVarPhpDoc(PHPDocVar::Ptr_t doc) { GetVarPhpDocs().push_back(doc); }
+
     // Aliases
     void SetIsInterface(bool b) { SetFlag(kClass_Interface, b); }
     bool IsInterface() const { return HasFlag(kClass_Interface); }
     void SetIsTrait(bool b) { SetFlag(kClass_Trait, b); }
     bool IsTrait() const { return HasFlag(kClass_Trait); }
+    void SetIsAbstractClass(bool b) { SetFlag(kClass_Abstract, b); }
+    bool IsAbstractClass() const { return HasFlag(kClass_Abstract); }
 };
 
 #endif // PHPENTITYCLASSIMPL_H

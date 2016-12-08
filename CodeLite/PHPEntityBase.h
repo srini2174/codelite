@@ -76,6 +76,7 @@ enum {
 enum {
     kClass_Interface = (1 << 1),
     kClass_Trait = (1 << 2),
+    kClass_Abstract = (1 << 3),
 };
 
 class WXDLLIMPEXP_CL PHPEntityBase
@@ -156,7 +157,12 @@ public:
      * @brief print this object to the stdout
      */
     virtual void PrintStdout(int indent) const = 0;
-
+    
+    /**
+     * @brief convert this object into a string tooltip
+     */
+    virtual wxString ToTooltip() const { return wxEmptyString; }
+    
     /**
      * @brief return a nicely formatted string to display for this
      * entity, mainly used for UI purposes
@@ -182,7 +188,12 @@ public:
      * @brief add a child to this scope
      */
     void AddChild(PHPEntityBase::Ptr_t child);
-
+    
+    /**
+     * @brief remove a child
+     */
+    void RemoveChild(PHPEntityBase::Ptr_t child);
+    
     /**
      * @brief convert this base class to its concrete
      * @return

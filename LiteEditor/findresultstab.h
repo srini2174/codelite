@@ -38,15 +38,6 @@
 #include "wx_ordered_map.h"
 #include <wx/aui/auibar.h>
 
-// Custom styles
-#define LEX_FIF_DEFAULT 0
-#define LEX_FIF_FILE 1
-#define LEX_FIF_MATCH 2
-#define LEX_FIF_LINE_NUMBER 3
-#define LEX_FIF_HEADER 4
-#define LEX_FIF_SCOPE 5
-#define LEX_FIF_MATCH_COMMENT 6
-
 // Map between the line numbers and a search results
 typedef std::map<int, SearchResult> MatchInfo_t;
 
@@ -67,15 +58,6 @@ protected:
         typedef wxOrderedMap<wxString, History> Map_t;
     };
 
-    enum eState {
-        kHeader,
-        kStartOfLine,
-        kFile,
-        kLineNumber,
-        kScope,
-        kMatch,
-    };
-    static eState m_curstate;
     History::Map_t m_history;
 
 protected:
@@ -112,9 +94,9 @@ public:
     FindResultsTab(wxWindow* parent, wxWindowID id, const wxString& name);
     ~FindResultsTab();
 
-    static void SetStyles(wxStyledTextCtrl* sci);
-    static void StyleText(wxStyledTextCtrl* ctrl, wxStyledTextEvent& e, bool hasSope = false);
-    static void ResetStyler();
+    void SetStyles(wxStyledTextCtrl* sci);
+    void StyleText(wxStyledTextCtrl* ctrl, wxStyledTextEvent& e, bool hasSope = false);
+    void ResetStyler();
 
     void NextMatch();
     void PrevMatch();
