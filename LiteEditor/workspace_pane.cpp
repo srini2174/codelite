@@ -51,6 +51,7 @@
 #include "clWorkspaceView.h"
 #include <algorithm>
 #include "pluginmanager.h"
+#include "clTabTogglerHelper.h"
 
 #ifdef __WXGTK20__
 // We need this ugly hack to workaround a gtk2-wxGTK name-clash
@@ -91,6 +92,10 @@ void WorkspacePane::CreateGUIControls()
 #else
     long style = (kNotebook_Default | kNotebook_AllowDnD);
 #endif
+    if(EditorConfigST::Get()->GetOptions()->IsTabColourDark()) {
+        style &= ~kNotebook_LightTabs;
+        style |= kNotebook_DarkTabs;
+    }
     style |= kNotebook_UnderlineActiveTab;
 
     m_book = new Notebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, style);
@@ -211,8 +216,7 @@ void WorkspacePane::UpdateProgress(int val)
     m_parsingProgress->Update();
 }
 
-typedef struct
-{
+typedef struct {
     wxString text;
     wxWindow* win;
     wxBitmap bmp;
@@ -395,6 +399,11 @@ void WorkspacePane::OnSettingsChanged(wxCommandEvent& event)
 {
     event.Skip();
     m_book->SetTabDirection(EditorConfigST::Get()->GetOptions()->GetWorkspaceTabsDirection());
+    if(EditorConfigST::Get()->GetOptions()->IsTabColourDark()) {
+        m_book->SetStyle((m_book->GetStyle() & ~kNotebook_LightTabs) | kNotebook_DarkTabs);
+    } else {
+        m_book->SetStyle((m_book->GetStyle() & ~kNotebook_DarkTabs) | kNotebook_LightTabs);
+    }
 }
 
 void WorkspacePane::OnToggleWorkspaceTab(clCommandEvent& event)
@@ -408,7 +417,12 @@ void WorkspacePane::OnToggleWorkspaceTab(clCommandEvent& event)
     const Tab& t = m_tabs.find(event.GetString())->second;
     if(event.IsSelected()) {
         // Insert the page
-        GetNotebook()->InsertPage(0, t.m_window, t.m_label, true, t.m_bmp);
+        int where = clTabTogglerHelper::IsTabInNotebook(GetNotebook(), t.m_label);
+        if(where == wxNOT_FOUND) {
+            GetNotebook()->InsertPage(0, t.m_window, t.m_label, true, t.m_bmp);
+        } else {
+            GetNotebook()->SetSelection(where);
+        }
     } else {
         // hide the tab
         int where = GetNotebook()->GetPageIndex(t.m_label);

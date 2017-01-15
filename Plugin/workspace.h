@@ -40,6 +40,8 @@
 #include "localworkspace.h"
 #include "codelite_exports.h"
 
+#define WORKSPACE_XML_VERSION "10.0.0"
+
 /*!
  * \brief
  * Workspace manager class
@@ -77,8 +79,13 @@ public:
 
     /// Destructor
     virtual ~clCxxWorkspace();
+    /**
+     * @brief return the XML version of this workspace
+     */
+    wxString GetVersion() const;
 
 private:
+    
     void DoUpdateBuildMatrix();
     /**
      * @brief mark all projects as non-active

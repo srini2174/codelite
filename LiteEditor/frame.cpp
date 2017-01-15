@@ -2032,6 +2032,7 @@ void clMainFrame::OnClose(wxCloseEvent& event)
             return;
         }
     }
+    SaveGeneralSettings();
 
     event.Skip();
 
@@ -2160,7 +2161,7 @@ void clMainFrame::OnFileReload(wxCommandEvent& event)
         if(editor->GetModify()) {
             // Ask user if he really wants to lose all changes
             wxString msg;
-            msg << editor->GetFileName().GetFullName() << _(" has been modified, reload file anyways?");
+            msg << editor->GetFileName().GetFullName() << _(" has been modified, reload file anyway?");
             wxRichMessageDialog dlg(::wxGetTopLevelParent(editor), msg, _("Reload File"),
                 wxYES_NO | wxCANCEL | wxNO_DEFAULT | wxICON_WARNING);
             if(dlg.ShowModal() != wxID_YES) {
@@ -4902,6 +4903,11 @@ bool clMainFrame::SaveLayoutAndSession()
     EditorConfigST::Get()->SetInteger(wxT("MainBook"), GetMainBook()->GetBookStyle());
     EditorConfigST::Get()->Save();
     return true;
+}
+
+void clMainFrame::SaveGeneralSettings()
+{
+    EditorConfigST::Get()->WriteObject(wxT("GeneralInfo"), &m_frameGeneralInfo);
 }
 
 void clMainFrame::OnNextFiFMatch(wxCommandEvent& e)

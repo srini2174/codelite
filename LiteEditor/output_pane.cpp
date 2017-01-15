@@ -39,20 +39,12 @@
 #include "taskpanel.h"
 #include "wxcl_log_text_ctrl.h"
 #include <algorithm>
+#include "clStrings.h"
+#include "clTabTogglerHelper.h"
 
 #if HAS_LIBCLANG
 #include "ClangOutputTab.h"
 #endif
-
-const wxString OutputPane::FIND_IN_FILES_WIN = _("Search");
-const wxString OutputPane::BUILD_WIN = _("Build");
-const wxString OutputPane::OUTPUT_WIN = _("Output");
-const wxString OutputPane::OUTPUT_DEBUG = _("Debug");
-const wxString OutputPane::REPLACE_IN_FILES = _("Replace");
-const wxString OutputPane::TASKS = _("Tasks");
-const wxString OutputPane::TRACE_TAB = _("Trace");
-const wxString OutputPane::SHOW_USAGE = _("References");
-const wxString OutputPane::CLANG_TAB = _("Clang");
 
 OutputPane::OutputPane(wxWindow* parent, const wxString& caption)
     : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(200, 250))
@@ -102,6 +94,10 @@ void OutputPane::CreateGUIControls()
 #else
         style |= kNotebook_RightTabs;
 #endif
+    }
+    if(EditorConfigST::Get()->GetOptions()->IsTabColourDark()) {
+        style &= ~kNotebook_LightTabs;
+        style |= kNotebook_DarkTabs;
     }
     style |= kNotebook_UnderlineActiveTab;
 
@@ -289,6 +285,11 @@ void OutputPane::OnSettingsChanged(wxCommandEvent& event)
 {
     event.Skip();
     m_book->SetTabDirection(EditorConfigST::Get()->GetOptions()->GetOutputTabsDirection());
+    if(EditorConfigST::Get()->GetOptions()->IsTabColourDark()) {
+        m_book->SetStyle((m_book->GetStyle() & ~kNotebook_LightTabs) | kNotebook_DarkTabs);
+    } else {
+        m_book->SetStyle((m_book->GetStyle() & ~kNotebook_DarkTabs) | kNotebook_LightTabs);
+    }
 }
 
 void OutputPane::OnToggleTab(clCommandEvent& event)
@@ -302,7 +303,12 @@ void OutputPane::OnToggleTab(clCommandEvent& event)
     const Tab& t = m_tabs.find(event.GetString())->second;
     if(event.IsSelected()) {
         // Insert the page
-        GetNotebook()->InsertPage(0, t.m_window, t.m_label, true, t.m_bmp);
+        int where = clTabTogglerHelper::IsTabInNotebook(GetNotebook(), t.m_label);
+        if(where == wxNOT_FOUND) {
+            GetNotebook()->InsertPage(0, t.m_window, t.m_label, true, t.m_bmp);
+        } else {
+            GetNotebook()->SetSelection(where);
+        }
     } else {
         // hide the tab
         int where = GetNotebook()->GetPageIndex(t.m_label);
@@ -311,3 +317,4 @@ void OutputPane::OnToggleTab(clCommandEvent& event)
         }
     }
 }
+
