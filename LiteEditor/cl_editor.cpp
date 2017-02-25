@@ -163,6 +163,7 @@ bool LEditor::m_ccInitialized = false;
 
 wxPrintData* g_printData = NULL;
 wxPageSetupDialogData* g_pageSetupData = NULL;
+static int ID_OPEN_URL = wxNOT_FOUND;
 
 //---------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------
@@ -1241,8 +1242,7 @@ void LEditor::OnSciUpdateUI(wxStyledTextEvent& event)
     // update line number
     wxString message;
 
-    message << wxT("Ln ") << curLine + 1 << wxT(", Col ") << GetColumn(mainSelectionPos) << ", Pos "
-            << mainSelectionPos;
+    message << wxT("Ln ") << curLine + 1 << ", Pos " << mainSelectionPos << ", Len " << GetLength();
 
     // Always update the status bar with event, calling it directly causes performance degredation
     m_mgr->GetStatusBar()->SetLinePosColumn(message);
@@ -3071,8 +3071,28 @@ void LEditor::OnContextMenu(wxContextMenuEvent& event)
 
     // let the plugins hook their content
     PluginManager::Get()->HookPopupMenu(menu, MenuTypeEditor);
-
+    
+    // +++++------------------------------------------------------
+    // if the selection is URL, offer to open it in the browser
+    // +++++------------------------------------------------------
+    wxString selectedText = GetSelectedText();
+    if(!selectedText.IsEmpty() && !selectedText.Contains("\n")) {
+        static wxRegEx reUrl("https?://.*?", wxRE_ADVANCED);
+        if(reUrl.IsValid() && reUrl.Matches(selectText)) {
+            // Offer to open the URL
+            if(ID_OPEN_URL == wxNOT_FOUND) {
+                ID_OPEN_URL = ::wxNewId();
+            }
+            wxString text;
+            text << "Go to " << reUrl.GetMatch(selectText);
+            menu->PrependSeparator();
+            menu->Prepend(ID_OPEN_URL, text);
+            menu->Bind(wxEVT_MENU, &LEditor::OpenURL, this, ID_OPEN_URL);
+        }
+    }
+    // +++++--------------------------
     // Popup the menu
+    // +++++--------------------------
     PopupMenu(menu);
     wxDELETE(menu);
 
@@ -4166,7 +4186,7 @@ int LEditor::DoGetOpenBracePos()
     bool exit_loop(false);
 
     int pos = PositionBefore(GetCurrentPos());
-    while(pos > 0 && char_tested < 256) {
+    while((pos > 0) && (char_tested < 256)) {
         wxChar ch = SafeGetChar(pos);
         if(m_context->IsCommentOrString(pos)) {
             pos = PositionBefore(pos);
@@ -4177,7 +4197,13 @@ int LEditor::DoGetOpenBracePos()
 
         switch(ch) {
         case wxT('{'):
+            depth++;
+            pos = PositionBefore(pos);
+            break;
         case wxT('}'):
+            depth--;
+            pos = PositionBefore(pos);
+            break;
         case wxT(';'):
             exit_loop = true;
             break;
@@ -5369,6 +5395,12 @@ void LEditor::ClearCCAnnotations()
 }
 
 void LEditor::ApplyEditorConfig() { SetProperties(); }
+
+void LEditor::OpenURL(wxCommandEvent& event)
+{
+    wxString url = GetSelectedText();
+    ::wxLaunchDefaultBrowser(url);
+}
 
 // ----------------------------------
 // SelectionInfo
