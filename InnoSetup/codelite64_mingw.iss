@@ -5,7 +5,7 @@
 AppName=CodeLite
 AppVerName=CodeLite
 AppPublisher=Eran Ifrah
-AppVersion=10.0.3
+AppVersion=10.0.4
 AppPublisherURL=http://codelite.org
 AppSupportURL=http://codelite.org
 AppUpdatesURL=http://codelite.org
@@ -13,7 +13,7 @@ DefaultDirName={pf64}\CodeLite
 DefaultGroupName=CodeLite
 LicenseFile=license.txt
 OutputDir=output
-OutputBaseFilename=codelite-amd64-10.0.3
+OutputBaseFilename=codelite-amd64-10.0.4
 ChangesEnvironment=yes
 FlatComponentsList=yes
 SetupIconFile=box_software.ico
@@ -142,6 +142,7 @@ Source: "{#CODELITE_ROOT}\Runtime\gdb_printers\*"; DestDir: "{app}\gdb_printers"
 Source: "{#CODELITE_ROOT}\Runtime\wxgui.zip";  DestDir: "{app}"; Flags: ignoreversion; 
 Source: "{#CODELITE_ROOT}\Runtime\PHP.zip";  DestDir: "{app}"; Flags: ignoreversion; 
 Source: "{#CODELITE_ROOT}\WebTools\javascript-win.zip";  DestDir: "{app}"; Flags: ignoreversion;
+Source: "{#CODELITE_ROOT}\Plugin\jsctags.zip";  DestDir: "{app}"; Flags: ignoreversion;
 
 [Icons]
 Name: "{group}\CodeLite "; Filename: "{app}\codelite.exe"; WorkingDir: "{app}"
