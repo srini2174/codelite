@@ -200,6 +200,10 @@
     <File Name="clStringHistory.cpp"/>
     <File Name="clFindResultsStyler.h"/>
     <File Name="clFindResultsStyler.cpp"/>
+    <File Name="phpoptions.cpp"/>
+    <File Name="phpoptions.h"/>
+    <File Name="clStatusBarMessage.h"/>
+    <File Name="clStatusBarMessage.cpp"/>
   </VirtualDirectory>
   <VirtualDirectory Name="Builders">
     <File Name="builder.h"/>
@@ -330,6 +334,8 @@
       <File Name="clTreeKeyboardInput.cpp"/>
       <File Name="clBitmapOverlayCtrl.h"/>
       <File Name="clBitmapOverlayCtrl.cpp"/>
+      <File Name="clTreeCtrlColourHelper.h"/>
+      <File Name="clTreeCtrlColourHelper.cpp"/>
     </VirtualDirectory>
     <VirtualDirectory Name="Dialogs">
       <File Name="nameanddescdlg.h"/>
@@ -413,6 +419,8 @@
     <File Name="clMouseCaptureLocker.cpp"/>
     <File Name="clMainFrameHelper.h"/>
     <File Name="clMainFrameHelper.cpp"/>
+    <File Name="VirtualDirectoryColour.h"/>
+    <File Name="VirtualDirectoryColour.cpp"/>
   </VirtualDirectory>
   <VirtualDirectory Name="JobQueue">
     <File Name="jobqueue.cpp"/>
@@ -536,6 +544,8 @@
     <File Name="DiffSideBySidePanel.cpp"/>
     <File Name="DiffConfig.h"/>
     <File Name="DiffConfig.cpp"/>
+    <File Name="clPatch.h"/>
+    <File Name="clPatch.cpp"/>
   </VirtualDirectory>
   <VirtualDirectory Name="Compilers">
     <File Name="ICompilerLocator.h"/>
