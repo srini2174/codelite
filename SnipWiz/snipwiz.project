@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CodeLite_Project Name="snipwiz">
+<CodeLite_Project Name="snipwiz" Version="10.0.0">
   <Plugins>
     <Plugin Name="qmake">
       <![CDATA[00060001N0015WinDebugUnicode0000000000000001N0011WinDebug_290000000000000001N0017WinReleaseUnicode0000000000000001N0013WinRelease_290000000000000001N0013Win_x64_Debug0000000000000001N0015Win_x64_Release000000000000]]>
@@ -55,6 +55,11 @@
   <Dependencies Name="ReleaseUnicode"/>
   <Dependencies Name="WinDebug_29"/>
   <Dependencies Name="WinRelease_29"/>
+  <VirtualDirectory Name="wxcrafter">
+    <VirtualDirectory Name="resources">
+      <File Name="templateclassbasedlg_snipwiz_bitmaps.cpp"/>
+    </VirtualDirectory>
+  </VirtualDirectory>
   <Dependencies Name="Win_wxWidgets_29"/>
   <Dependencies Name="Win_x64_Debug"/>
   <Dependencies Name="Win_x64_Release"/>
@@ -91,6 +96,7 @@
       </Linker>
       <ResourceCompiler Options="" Required="no"/>
       <General OutputFile="../Runtime/plugins/snipwiz.dll" IntermediateDirectory="./WinDbg_29" Command="" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="" PauseExecWhenProcTerminates="yes" IsGUIProgram="no" IsEnabled="yes"/>
+      <BuildSystem Name="Default"/>
       <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
         <![CDATA[]]>
       </Environment>
@@ -131,7 +137,7 @@
         <IncludePath Value="../sqlite3"/>
         <IncludePath Value="../sdk/wxsqlite3/include"/>
       </Compiler>
-      <Linker Options="-O2;$(shell wx-config --debug=yes --libs --unicode=yes);" Required="yes">
+      <Linker Options="-O2;$(shell wx-config --debug=yes --libs std,stc --unicode=yes)" Required="yes">
         <LibraryPath Value="../lib/gcc_lib"/>
         <Library Value="libplugin_sdkud.dll"/>
         <Library Value="libCodeLiteud.dll"/>
@@ -139,6 +145,7 @@
       </Linker>
       <ResourceCompiler Options="" Required="no"/>
       <General OutputFile="$(IntermediateDirectory)/$(ProjectName)-dbg.dll" IntermediateDirectory="$(ConfigurationName)" Command="" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="" PauseExecWhenProcTerminates="yes" IsGUIProgram="no" IsEnabled="yes"/>
+      <BuildSystem Name="Default"/>
       <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
         <![CDATA[]]>
       </Environment>
@@ -190,6 +197,7 @@
       </Linker>
       <ResourceCompiler Options="" Required="no"/>
       <General OutputFile="$(IntermediateDirectory)/$(ProjectName).dll" IntermediateDirectory="$(ConfigurationName)" Command="./CodeLite" CommandArguments="-b ." UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="../Runtime" PauseExecWhenProcTerminates="no" IsGUIProgram="no" IsEnabled="yes"/>
+      <BuildSystem Name="Default"/>
       <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
         <![CDATA[]]>
       </Environment>
@@ -241,6 +249,7 @@
       </Linker>
       <ResourceCompiler Options="" Required="no"/>
       <General OutputFile="$(IntermediateDirectory)/$(ProjectName).dll" IntermediateDirectory="$(ConfigurationName)" Command="./CodeLite" CommandArguments="-b ." UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="../Runtime" PauseExecWhenProcTerminates="no" IsGUIProgram="no" IsEnabled="yes"/>
+      <BuildSystem Name="Default"/>
       <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
         <![CDATA[]]>
       </Environment>
@@ -275,13 +284,4 @@
       </Completion>
     </Configuration>
   </Settings>
-  <VirtualDirectory Name="wxcrafter">
-    <VirtualDirectory Name="resources">
-      <File Name="templateclassbasedlg_snipwiz_bitmaps.cpp"/>
-    </VirtualDirectory>
-  </VirtualDirectory>
-  <Dependencies Name="Win_wxWidgets_29"/>
-  <Dependencies Name="Win_x64_Debug"/>
-  <Dependencies Name="Win_x64_Release"/>
-  <Dependencies Name="Win_x86_Release"/>
 </CodeLite_Project>

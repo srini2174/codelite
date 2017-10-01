@@ -92,7 +92,7 @@
 // fix bug in wxscintilla.h
 #ifdef EVT_STC_CALLTIP_CLICK
 #undef EVT_STC_CALLTIP_CLICK
-#define EVT_STC_CALLTIP_CLICK(id, fn)                                                                         \
+#define EVT_STC_CALLTIP_CLICK(id, fn) \
     DECLARE_EVENT_TABLE_ENTRY(wxEVT_STC_CALLTIP_CLICK, id, wxID_ANY, (wxObjectEventFunction)(wxEventFunction) \
                               wxStaticCastEvent(wxStyledTextEventFunction, &fn),                              \
                               (wxObject*)NULL),
@@ -525,6 +525,8 @@ void LEditor::SetCaretAt(long pos)
 void LEditor::SetProperties()
 {
     UsePopUp(false);
+    SetTechnology(wxSTC_TECHNOLOGY_DIRECTWRITE);
+    
     SetRectangularSelectionModifier(wxSTC_KEYMOD_CTRL);
     SetAdditionalSelectionTyping(true);
     OptionsConfigPtr options = GetOptions();
@@ -769,8 +771,6 @@ void LEditor::SetProperties()
     SetLayoutCache(wxSTC_CACHE_DOCUMENT);
 
 #elif defined(__WXGTK__)
-    SetTwoPhaseDraw(true);
-    SetBufferedDraw(false);
     SetLayoutCache(wxSTC_CACHE_PAGE);
 
 #else // MSW
@@ -2902,7 +2902,7 @@ void LEditor::GetBookmarkTooltip(int lineno, wxString& tip, wxString& title)
     }
 }
 
-void LEditor::ReloadFile()
+void LEditor::OpenFile()
 {
     wxWindowUpdateLocker locker(this);
     SetReloadingFile(true);
@@ -2980,9 +2980,9 @@ void LEditor::Create(const wxString& project, const wxFileName& fileName)
     SetProject(project);
     // let the editor choose the syntax highlight to use according to file extension
     // and set the editor properties to default
-    SetSyntaxHighlight(false); // Dont call 'UpdateColors' it is called in 'ReloadFile'
+    SetSyntaxHighlight(false); // Dont call 'UpdateColors' it is called in 'OpenFile'
     // reload the file from disk
-    ReloadFile();
+    OpenFile();
 }
 
 void LEditor::InsertTextWithIndentation(const wxString& text, int lineno)
@@ -5464,11 +5464,45 @@ void LEditor::OpenURL(wxCommandEvent& event)
     ::wxLaunchDefaultBrowser(url);
 }
 
+void LEditor::ReloadFromDisk(bool keepUndoHistory)
+{
+    wxWindowUpdateLocker locker(this);
+    SetReloadingFile(true);
+
+    DoCancelCalltip();
+    GetFunctionTip()->Deactivate();
+
+    if(m_fileName.GetFullPath().IsEmpty() == true || !m_fileName.FileExists()) {
+        SetEOLMode(GetEOLByOS());
+        SetReloadingFile(false);
+        return;
+    }
+
+    clEditorStateLocker stateLocker(GetCtrl());
+
+    wxString text;
+
+    // Read the file we currently support:
+    // BOM, Auto-Detect encoding & User defined encoding
+    m_fileBom.Clear();
+    ReadFileWithConversion(m_fileName.GetFullPath(), text, GetOptions()->GetFileFontEncoding(), &m_fileBom);
+
+    SetText(text);
+    m_modifyTime = GetFileLastModifiedTime();
+    SetSavePoint();
+
+    if(!keepUndoHistory) {
+        EmptyUndoBuffer();
+        GetCommandsProcessor().Reset();
+    }
+    
+    SetReloadingFile(false);
+}
+
 // ----------------------------------
 // SelectionInfo
 // ----------------------------------
-struct SelectorSorter
-{
+struct SelectorSorter {
     bool operator()(const std::pair<int, int>& a, const std::pair<int, int>& b) { return a.first < b.first; }
 };
 
