@@ -25,7 +25,6 @@
 
 #include "code_completion_page.h"
 #include "localworkspace.h"
-#include "clang_code_completion.h"
 #include <wx/tokenzr.h>
 #include "globals.h"
 
@@ -48,6 +47,7 @@ CodeCompletionPage::CodeCompletionPage(wxWindow* parent, int type)
 
         m_checkBoxCpp11->SetValue(LocalWorkspaceST::Get()->GetParserFlags() & LocalWorkspace::EnableCpp11);
         m_checkBoxCpp14->SetValue(LocalWorkspaceST::Get()->GetParserFlags() & LocalWorkspace::EnableCpp14);
+        m_checkBoxCpp17->SetValue(LocalWorkspaceST::Get()->GetParserFlags() & LocalWorkspace::EnableCpp17);
         m_checkBoxSWTLW->SetValue(LocalWorkspaceST::Get()->GetParserFlags() & LocalWorkspace::EnableSWTLW);
     }
 }
@@ -72,16 +72,10 @@ void CodeCompletionPage::Save()
 
         if(m_checkBoxCpp11->IsChecked()) flags |= LocalWorkspace::EnableCpp11;
         if(m_checkBoxCpp14->IsChecked()) flags |= LocalWorkspace::EnableCpp14;
+        if(m_checkBoxCpp17->IsChecked()) flags |= LocalWorkspace::EnableCpp17;
         if(m_checkBoxSWTLW->IsChecked()) flags |= LocalWorkspace::EnableSWTLW;
         LocalWorkspaceST::Get()->SetParserFlags(flags);
         LocalWorkspaceST::Get()->Flush();
-
-#if HAS_LIBCLANG
-        if(m_ccChanged) {
-            ClangCodeCompletion::Instance()->ClearCache();
-            m_ccChanged = false;
-        }
-#endif
     }
 }
 

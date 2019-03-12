@@ -21,8 +21,6 @@ void XDebugComThread::Stop()
 
 void* XDebugComThread::Entry()
 {
-    wxLog::EnableLogging(false);
-
     clDEBUG() << "CodeLite >>> XDebugComThread started" << clEndl;
     //----------------------------------------------------------------
     // Start the debugger server and wait for XDebug to connect to us
@@ -30,10 +28,11 @@ void* XDebugComThread::Entry()
     clSocketBase::Ptr_t client;
     int retry(0);
     try {
-        clDEBUG() << "CodeLite >>> Creating server on" << m_host << ":" << m_port << clEndl;
 
-        wxCharBuffer cb = m_host.mb_str(wxConvUTF8);
-        m_server.CreateServer(cb.data(), m_port);
+        wxString connectionString;
+        connectionString << "tcp://" << m_host << ":" << m_port;
+        clDEBUG() << "CodeLite >>> Creating server on:" << connectionString << clEndl;
+        m_server.Start(connectionString);
 
         clDEBUG() << "CodeLite >>> Listening on" << m_host << ":" << m_port << clEndl;
 

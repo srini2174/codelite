@@ -36,7 +36,6 @@
 #include "add_option_dialog.h"
 #include "globals.h"
 #include "includepathlocator.h"
-#include "clang_code_completion.h"
 #include <build_settings_config.h>
 #include <compiler.h>
 #include <ICompilerLocator.h>
@@ -47,7 +46,7 @@
 
 //---------------------------------------------------------
 
-TagsOptionsDlg::TagsOptionsDlg(wxWindow* parent, const TagsOptionsData& data)
+CodeCompletionSettingsDialog::CodeCompletionSettingsDialog(wxWindow* parent, const TagsOptionsData& data)
     : TagsOptionsBaseDlg(parent)
     , m_data(data)
 {
@@ -64,7 +63,7 @@ TagsOptionsDlg::TagsOptionsDlg(wxWindow* parent, const TagsOptionsData& data)
     ::wxPGPropertyBooleanUseCheckbox(m_pgMgrColouring->GetGrid());
     Centre();
     GetSizer()->Fit(this);
-    SetName("TagsOptionsDlg");
+    SetName("CodeCompletionSettingsDialog");
     WindowAttrManager::Load(this);
 
     // Set default values
@@ -77,17 +76,16 @@ TagsOptionsDlg::TagsOptionsDlg(wxWindow* parent, const TagsOptionsData& data)
     m_checkCppKeywordAssist->SetValue(m_data.GetFlags() & CC_CPP_KEYWORD_ASISST ? true : false);
     m_checkDisableParseOnSave->SetValue(m_data.GetFlags() & CC_DISABLE_AUTO_PARSING ? true : false);
     m_checkBoxretagWorkspaceOnStartup->SetValue(m_data.GetFlags() & CC_RETAG_WORKSPACE_ON_STARTUP ? true : false);
-    m_checkBoxDeepUsingNamespaceResolving->SetValue(
-        m_data.GetFlags() & CC_DEEP_SCAN_USING_NAMESPACE_RESOLVING ? true : false);
+    m_checkBoxDeepUsingNamespaceResolving->SetValue(m_data.GetFlags() & CC_DEEP_SCAN_USING_NAMESPACE_RESOLVING ? true
+                                                                                                               : false);
     m_checkBoxEnableCaseSensitiveCompletion->SetValue(m_data.GetFlags() & CC_IS_CASE_SENSITIVE ? true : false);
     m_checkBoxKeepFunctionSignature->SetValue(m_data.GetFlags() & CC_KEEP_FUNCTION_SIGNATURE_UNFORMATTED);
     m_spinCtrlNumberOfCCItems->ChangeValue(::wxIntToString(m_data.GetCcNumberOfDisplayItems()));
     m_textCtrlFileSpec->ChangeValue(m_data.GetFileSpec());
-    
+
     //------------------------------------------------------------------
     // Colouring
     //------------------------------------------------------------------
-    m_pgPropColourWorkspaceSymbols->SetValueFromInt(m_data.GetCcColourFlags());
     m_pgPropColourLocalVariables->SetValue(m_data.GetFlags() & CC_COLOUR_VARS ? true : false);
     m_pgPropTrackPreProcessors->SetValue(m_data.GetCcColourFlags() & CC_COLOUR_MACRO_BLOCKS ? true : false);
 
@@ -131,21 +129,19 @@ TagsOptionsDlg::TagsOptionsDlg(wxWindow* parent, const TagsOptionsData& data)
     m_choiceCachePolicy->Select(1);
 
     int where = m_choiceCachePolicy->FindString(m_data.GetClangCachePolicy());
-    if(where != wxNOT_FOUND) {
-        m_choiceCachePolicy->Select(where);
-    }
+    if(where != wxNOT_FOUND) { m_choiceCachePolicy->Select(where); }
 }
 
-TagsOptionsDlg::~TagsOptionsDlg() {}
+CodeCompletionSettingsDialog::~CodeCompletionSettingsDialog() {}
 
-void TagsOptionsDlg::OnButtonOk(wxCommandEvent& event)
+void CodeCompletionSettingsDialog::OnButtonOk(wxCommandEvent& event)
 {
     wxUnusedVar(event);
     CopyData();
     EndModal(wxID_OK);
 }
 
-void TagsOptionsDlg::CopyData()
+void CodeCompletionSettingsDialog::CopyData()
 {
     //----------------------------------------------------
     // Display and behavior
@@ -160,7 +156,7 @@ void TagsOptionsDlg::CopyData()
     SetFlag(CC_KEEP_FUNCTION_SIGNATURE_UNFORMATTED, m_checkBoxKeepFunctionSignature->IsChecked());
     m_data.SetCcNumberOfDisplayItems(::wxStringToInt(m_spinCtrlNumberOfCCItems->GetValue(), 100));
     m_data.SetFileSpec(m_textCtrlFileSpec->GetValue());
-    
+
     //----------------------------------------------------
     // Colouring
     //----------------------------------------------------
@@ -201,7 +197,7 @@ void TagsOptionsDlg::CopyData()
     m_data.SetClangCachePolicy(m_choiceCachePolicy->GetStringSelection());
 }
 
-void TagsOptionsDlg::SetFlag(CodeCompletionOpts flag, bool set)
+void CodeCompletionSettingsDialog::SetFlag(CodeCompletionOpts flag, bool set)
 {
     if(set) {
         m_data.SetFlags(m_data.GetFlags() | flag);
@@ -210,7 +206,7 @@ void TagsOptionsDlg::SetFlag(CodeCompletionOpts flag, bool set)
     }
 }
 
-void TagsOptionsDlg::SetColouringFlag(CodeCompletionColourOpts flag, bool set)
+void CodeCompletionSettingsDialog::SetColouringFlag(CodeCompletionColourOpts flag, bool set)
 {
     if(set) {
         m_data.SetCcColourFlags(m_data.GetCcColourFlags() | flag);
@@ -219,7 +215,7 @@ void TagsOptionsDlg::SetColouringFlag(CodeCompletionColourOpts flag, bool set)
     }
 }
 
-void TagsOptionsDlg::Parse()
+void CodeCompletionSettingsDialog::Parse()
 {
     // Prepate list of files to work on
     wxArrayString files = wxStringTokenize(m_textCtrlFilesList->GetValue(), wxT(" \t"), wxTOKEN_STRTOK);
@@ -243,7 +239,8 @@ void TagsOptionsDlg::Parse()
 
     // Clear the PreProcessor table
     PPTable::Instance()->Clear();
-    for(size_t i = 0; i < fullpathsArr.size(); i++) PPScan(fullpathsArr.Item(i), true);
+    for(size_t i = 0; i < fullpathsArr.size(); i++)
+        PPScan(fullpathsArr.Item(i), true);
 
     // Open an editor and print out the results
     IEditor* editor = PluginManager::Get()->NewEditor();
@@ -254,7 +251,7 @@ void TagsOptionsDlg::Parse()
     }
 }
 
-void TagsOptionsDlg::OnAddExcludePath(wxCommandEvent& event)
+void CodeCompletionSettingsDialog::OnAddExcludePath(wxCommandEvent& event)
 {
     wxUnusedVar(event);
     wxString new_path =
@@ -264,16 +261,14 @@ void TagsOptionsDlg::OnAddExcludePath(wxCommandEvent& event)
         wxArrayString currPaths = wxStringTokenize(currPathsStr, wxT("\n\r"), wxTOKEN_STRTOK);
         if(currPaths.Index(new_path) == wxNOT_FOUND) {
             currPathsStr.Trim().Trim(false);
-            if(currPathsStr.IsEmpty() == false) {
-                currPathsStr << wxT("\n");
-            }
+            if(currPathsStr.IsEmpty() == false) { currPathsStr << wxT("\n"); }
             currPathsStr << new_path;
             m_textCtrlCtagsExcludePaths->ChangeValue(currPathsStr);
         }
     }
 }
 
-void TagsOptionsDlg::OnAddSearchPath(wxCommandEvent& event)
+void CodeCompletionSettingsDialog::OnAddSearchPath(wxCommandEvent& event)
 {
     wxUnusedVar(event);
     wxString new_path =
@@ -284,9 +279,7 @@ void TagsOptionsDlg::OnAddSearchPath(wxCommandEvent& event)
         if(currPaths.Index(new_path) == wxNOT_FOUND) {
 
             currPathsStr.Trim().Trim(false);
-            if(currPathsStr.IsEmpty() == false) {
-                currPathsStr << wxT("\n");
-            }
+            if(currPathsStr.IsEmpty() == false) { currPathsStr << wxT("\n"); }
             currPathsStr << new_path;
 
             m_textCtrlCtagsSearchPaths->ChangeValue(currPathsStr);
@@ -294,56 +287,49 @@ void TagsOptionsDlg::OnAddSearchPath(wxCommandEvent& event)
     }
 }
 
-void TagsOptionsDlg::OnAutoShowWordAssitUI(wxUpdateUIEvent& event) { event.Enable(m_checkWordAssist->IsChecked()); }
-
-void TagsOptionsDlg::OnClangCCEnabledUI(wxUpdateUIEvent& event) { event.Enable(m_checkBoxEnableClangCC->IsChecked()); }
-
-void TagsOptionsDlg::OnClearClangCache(wxCommandEvent& event)
+void CodeCompletionSettingsDialog::OnAutoShowWordAssitUI(wxUpdateUIEvent& event)
 {
-    wxBusyCursor cursor;
-#if HAS_LIBCLANG
-    ClangCodeCompletion::Instance()->ClearCache();
-#endif
+    event.Enable(m_checkWordAssist->IsChecked());
 }
 
-void TagsOptionsDlg::OnClearClangCacheUI(wxUpdateUIEvent& event)
+void CodeCompletionSettingsDialog::OnClangCCEnabledUI(wxUpdateUIEvent& event)
 {
-#if HAS_LIBCLANG
-    event.Enable(m_checkBoxEnableClangCC->IsChecked() && !ClangCodeCompletion::Instance()->IsCacheEmpty());
-#else
-    event.Enable(false);
-#endif
+    event.Enable(m_checkBoxEnableClangCC->IsChecked());
 }
 
-void TagsOptionsDlg::OnFileSelectedUI(wxUpdateUIEvent& event)
+void CodeCompletionSettingsDialog::OnClearClangCache(wxCommandEvent& event) { wxBusyCursor cursor; }
+
+void CodeCompletionSettingsDialog::OnClearClangCacheUI(wxUpdateUIEvent& event) { event.Enable(false); }
+
+void CodeCompletionSettingsDialog::OnFileSelectedUI(wxUpdateUIEvent& event)
 {
     event.Enable(m_textCtrlFilesList->GetValue().IsEmpty() == false);
 }
 
-void TagsOptionsDlg::OnParse(wxCommandEvent& event)
+void CodeCompletionSettingsDialog::OnParse(wxCommandEvent& event)
 {
     wxUnusedVar(event);
     Parse();
 }
 
-void TagsOptionsDlg::OnSuggestSearchPaths(wxCommandEvent& event)
+void CodeCompletionSettingsDialog::OnSuggestSearchPaths(wxCommandEvent& event)
 {
     wxUnusedVar(event);
     DoSuggest(m_textCtrlClangSearchPaths);
 }
 
-wxArrayString TagsOptionsDlg::GetCTagsSearchPaths() const
+wxArrayString CodeCompletionSettingsDialog::GetCTagsSearchPaths() const
 {
     return wxStringTokenize(m_textCtrlCtagsSearchPaths->GetValue(), wxT("\r\n"), wxTOKEN_STRTOK);
 }
 
-void TagsOptionsDlg::OnSuggestCtags(wxCommandEvent& event)
+void CodeCompletionSettingsDialog::OnSuggestCtags(wxCommandEvent& event)
 {
     wxUnusedVar(event);
     DoSuggest(m_textCtrlCtagsSearchPaths);
 }
 
-void TagsOptionsDlg::DoSuggest(wxStyledTextCtrl* textCtrl)
+void CodeCompletionSettingsDialog::DoSuggest(wxStyledTextCtrl* textCtrl)
 {
     CompilerPtrVec_t allCompilers = BuildSettingsConfigST::Get()->GetAllCompilers();
 
@@ -351,7 +337,7 @@ void TagsOptionsDlg::DoSuggest(wxStyledTextCtrl* textCtrl)
     wxArrayString compilerNames;
     std::for_each(allCompilers.begin(), allCompilers.end(), [&](CompilerPtr c) {
         if(c->GetCompilerFamily() == COMPILER_FAMILY_CLANG || c->GetCompilerFamily() == COMPILER_FAMILY_MINGW ||
-            c->GetCompilerFamily() == COMPILER_FAMILY_GCC) {
+           c->GetCompilerFamily() == COMPILER_FAMILY_GCC) {
             compilerNames.Add(c->GetName());
         } else if(::clIsCygwinEnvironment() && c->GetCompilerFamily() == COMPILER_FAMILY_CYGWIN) {
             compilerNames.Add(c->GetName());
@@ -386,34 +372,29 @@ void TagsOptionsDlg::DoSuggest(wxStyledTextCtrl* textCtrl)
     suggestedPaths.Trim().Trim(false);
     if(!suggestedPaths.IsEmpty()) {
         if(::wxMessageBox(_("Accepting this suggestion will replace your old search paths with these paths\nContinue?"),
-               "CodeLite", wxYES_NO | wxYES_DEFAULT | wxCANCEL | wxICON_QUESTION) != wxYES) {
+                          "CodeLite", wxYES_NO | wxYES_DEFAULT | wxCANCEL | wxICON_QUESTION) != wxYES) {
             return;
         }
         textCtrl->Clear();
         textCtrl->ChangeValue(suggestedPaths);
     }
 }
-void TagsOptionsDlg::OnColouringPropertyValueChanged(wxPropertyGridEvent& event)
+void CodeCompletionSettingsDialog::OnColouringPropertyValueChanged(wxPropertyGridEvent& event)
 {
     // Enable the local variables colouring feature
     SetFlag(CC_COLOUR_VARS, m_pgPropColourLocalVariables->GetValue().GetBool());
 
-    // if any of the types is selected, enable this feature
-    size_t ccColourFlags(0);
-    ccColourFlags = m_pgPropColourWorkspaceSymbols->GetValue().GetInteger();
-    m_data.SetCcColourFlags(ccColourFlags);
-    SetFlag(CC_COLOUR_WORKSPACE_TAGS, (ccColourFlags > 0));
-
     // Enable pre processor tracking (must come after we set the flags above)
     SetColouringFlag(CC_COLOUR_MACRO_BLOCKS, m_pgPropTrackPreProcessors->GetValue().GetBool());
 }
-void TagsOptionsDlg::OnButtonCancel(wxCommandEvent& event)
+
+void CodeCompletionSettingsDialog::OnButtonCancel(wxCommandEvent& event)
 {
     event.Skip();
     EndModal(wxID_CANCEL);
 }
 
-void TagsOptionsDlg::DoSetEditEventsHandler(wxWindow* win)
+void CodeCompletionSettingsDialog::DoSetEditEventsHandler(wxWindow* win)
 {
     // wxTextCtrl needs some extra special handling
     if(dynamic_cast<wxStyledTextCtrl*>(win)) {

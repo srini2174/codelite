@@ -11,16 +11,16 @@ SSHWorkspaceSettings::~SSHWorkspaceSettings()
 {
 }
 
-void SSHWorkspaceSettings::FromJSON(const JSONElement& json)
+void SSHWorkspaceSettings::FromJSON(const JSONItem& json)
 {
     m_account = json.namedObject("m_account").toString();
     m_remoteFolder = json.namedObject("m_remoteFolder").toString();
     m_remoteUploadEnabled = json.namedObject("m_remoteUploadEnabled").toBool();
 }
 
-JSONElement SSHWorkspaceSettings::ToJSON() const
+JSONItem SSHWorkspaceSettings::ToJSON() const
 {
-    JSONElement json = JSONElement::createObject(GetName());
+    JSONItem json = JSONItem::createObject(GetName());
     json.addProperty("m_account", m_account);
     json.addProperty("m_remoteFolder", m_remoteFolder);
     json.addProperty("m_remoteUploadEnabled", m_remoteUploadEnabled);
@@ -44,4 +44,11 @@ void SSHWorkspaceSettings::Save()
 bool SSHWorkspaceSettings::IsRemoteUploadSet() const
 {
     return !m_remoteFolder.IsEmpty() && !m_account.IsEmpty();
+}
+
+void SSHWorkspaceSettings::Reset()
+{
+    m_remoteFolder.clear();
+    m_account.clear();
+    m_remoteUploadEnabled = false;
 }

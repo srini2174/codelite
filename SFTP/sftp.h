@@ -26,14 +26,14 @@
 #ifndef __SFTP__
 #define __SFTP__
 
-#include "plugin.h"
-#include "sftp_workspace_settings.h"
-#include "cl_command_event.h"
-#include "macros.h"
-#include "remote_file_info.h"
 #include "clFileSystemEvent.h"
 #include "clSFTPEvent.h"
 #include "clTabTogglerHelper.h"
+#include "cl_command_event.h"
+#include "macros.h"
+#include "plugin.h"
+#include "remote_file_info.h"
+#include "sftp_workspace_settings.h"
 
 class SFTPStatusPage;
 class SFTPTreeView;
@@ -43,6 +43,7 @@ class SFTPClientData : public wxClientData
     wxString localPath;
     wxString remotePath;
     size_t permissions;
+    int lineNumber = wxNOT_FOUND;
 
 public:
     SFTPClientData()
@@ -57,6 +58,8 @@ public:
     const wxString& GetRemotePath() const { return remotePath; }
     void SetPermissions(size_t permissions) { this->permissions = permissions; }
     size_t GetPermissions() const { return permissions; }
+    void SetLineNumber(int lineNumber) { this->lineNumber = lineNumber; }
+    int GetLineNumber() const { return lineNumber; }
 };
 
 class SFTP : public IPlugin
@@ -76,6 +79,10 @@ public:
     void OpenWithDefaultApp(const wxString& localFileName);
     void OpenContainingFolder(const wxString& localFileName);
     void AddRemoteFile(const RemoteFileInfo& remoteFile);
+    SFTPStatusPage* GetOutputPane() { return m_outputPane; }
+    SFTPTreeView* GetTreeView() { return m_treeView; }
+
+    void OpenFile(const wxString& remotePath, int lineNumber = wxNOT_FOUND);
 
 protected:
     void OnReplaceInFiles(clFileSystemEvent& e);
@@ -87,6 +94,8 @@ protected:
     void OnWorkspaceOpened(wxCommandEvent& e);
     void OnWorkspaceClosed(wxCommandEvent& e);
     void OnFileSaved(clCommandEvent& e);
+    void OnFileRenamed(clFileSystemEvent& e);
+    void OnFileDeleted(clFileSystemEvent& e);
     void OnEditorClosed(wxCommandEvent& e);
     void MSWInitiateConnection();
 
@@ -97,16 +106,33 @@ protected:
     bool IsPaneDetached(const wxString& name) const;
 
     // API calls
+
+    // Save remote file content to match the content of a local file
+    // e.GetLocalFile() -> the local file
+    // e.GetRemoteFile() -> the target file
     void OnSaveFile(clSFTPEvent& e);
+
+    // Rename a remote file
+    // e.GetRemoteFile() -> the "old" remote file path
+    // e.GetNewRemoteFile() -> the "new" remote file path
+    void OnRenameFile(clSFTPEvent& e);
+
+    // Delete a remote file
+    // e.GetRemoteFile() -> the file to be deleted
+    void OnDeleteFile(clSFTPEvent& e);
+
+private:
+    bool IsCxxWorkspaceMirrorEnabled() const;
+    void DoFileDeleted(const wxString& filepath);
+    wxString GetRemotePath(const wxString& localpath) const;
 
 public:
     //--------------------------------------------
     // Abstract methods
     //--------------------------------------------
-    virtual clToolBar* CreateToolBar(wxWindow* parent);
+    virtual void CreateToolBar(clToolBar* toolbar);
     virtual void CreatePluginMenu(wxMenu* pluginsMenu);
     virtual void HookPopupMenu(wxMenu* menu, MenuType type);
-    virtual void UnHookPopupMenu(wxMenu* menu, MenuType type);
     virtual void UnPlug();
     IManager* GetManager() { return m_mgr; }
 

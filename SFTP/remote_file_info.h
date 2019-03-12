@@ -30,6 +30,7 @@
 #include <wx/filename.h>
 #include <map>
 #include <wx/clntdata.h>
+#include "wxStringHash.h"
 
 class RemoteFileInfo : public wxClientData
 {
@@ -37,9 +38,10 @@ class RemoteFileInfo : public wxClientData
     wxString m_localFile;
     wxString m_remoteFile;
     size_t m_premissions;
+    int m_lineNumber = 0;
 
 public:
-    typedef std::map<wxString, RemoteFileInfo> Map_t;
+    typedef std::unordered_map<wxString, RemoteFileInfo> Map_t;
 
 public:
     RemoteFileInfo();
@@ -54,6 +56,8 @@ public:
     size_t GetPremissions() const { return m_premissions; }
 
     static wxString GetTempFolder();
+    void SetLineNumber(int lineNumber) { this->m_lineNumber = lineNumber; }
+    int GetLineNumber() const { return m_lineNumber; }
 };
 
 #endif // REMOTEFILEINFO_H

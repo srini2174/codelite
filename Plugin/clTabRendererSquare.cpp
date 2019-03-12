@@ -1,7 +1,10 @@
 #include "clTabRendererSquare.h"
-#include <wx/settings.h>
-#include <wx/font.h>
+
 #include "drawingutils.h"
+#include "editor_config.h"
+#include <wx/dcmemory.h>
+#include <wx/font.h>
+#include <wx/settings.h>
 
 #define DRAW_LINE(__p1, __p2) \
     dc.DrawLine(__p1, __p2);  \
@@ -10,6 +13,7 @@
     dc.DrawLine(__p1, __p2);
 
 clTabRendererSquare::clTabRendererSquare()
+    : clTabRenderer("MINIMAL")
 {
 #ifdef __WXGTK__
     bottomAreaHeight = 0;
@@ -18,137 +22,90 @@ clTabRendererSquare::clTabRendererSquare()
 #endif
     majorCurveWidth = 0;
     smallCurveWidth = 0;
-    overlapWidth = 2;
-    verticalOverlapWidth = 2;
-    xSpacer = 10;
-    ySpacer = 4;
+    overlapWidth = 0;
+    verticalOverlapWidth = 0;
+    xSpacer = 15;
+    ySpacer = EditorConfigST::Get()->GetOptions()->GetNotebookTabHeight();
 }
 
 clTabRendererSquare::~clTabRendererSquare() {}
 
-void clTabRendererSquare::Draw(wxDC& dc, const clTabInfo& tabInfo, const clTabColours& colours, size_t style)
+void clTabRendererSquare::Draw(wxWindow* parent, wxDC& dc, wxDC& fontDC, const clTabInfo& tabInfo,
+                               const clTabColours& colours, size_t style, eButtonState buttonState)
 {
     wxColour inactiveTabPenColour = colours.inactiveTabPenColour;
+    bool isDark = DrawingUtils::IsDark(colours.activeTabBgColour);
 
-    wxColour bgColour(tabInfo.IsActive() ? colours.activeTabBgColour : colours.inactiveTabBgColour);
+    wxColour bgColour;
+    wxColour textColour;
+    if(tabInfo.IsActive()) {
+        bgColour = colours.activeTabBgColour;
+        textColour = colours.activeTabTextColour;
+        if(isDark) { bgColour = bgColour.ChangeLightness(80); }
+    } else {
+        bgColour = colours.inactiveTabBgColour;
+        textColour = colours.inactiveTabTextColour;
+        if(isDark) { textColour = textColour.ChangeLightness(90); }
+    }
+
     wxColour penColour(tabInfo.IsActive() ? colours.activeTabPenColour : inactiveTabPenColour);
-    wxFont font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
-    dc.SetTextForeground(tabInfo.IsActive() ? colours.activeTabTextColour : colours.inactiveTabTextColour);
-    dc.SetFont(font);
+    wxColour separatorColour = penColour.ChangeLightness(110);
+
+    wxFont font = GetTabFont(false);
+    fontDC.SetTextForeground(textColour);
+    fontDC.SetFont(font);
 
     wxRect rr = tabInfo.m_rect;
 
     dc.SetBrush(bgColour);
-    dc.SetPen(penColour);
-    // if(!tabInfo.IsActive()) {
-    dc.SetPen(*wxTRANSPARENT_PEN);
-    // }
+    dc.SetPen(bgColour);
     dc.DrawRectangle(rr);
 
     // Restore the pen
+    penColour = bgColour;
     dc.SetPen(penColour);
-    if(style & kNotebook_BottomTabs) {
-        // Draw bitmap
-        if(tabInfo.GetBitmap().IsOk()) {
-            dc.DrawBitmap(tabInfo.GetBitmap(), tabInfo.m_bmpX + rr.GetX(), tabInfo.m_bmpY);
-        }
-        dc.DrawText(tabInfo.m_label, tabInfo.m_textX + rr.GetX(), tabInfo.m_textY);
-        if(tabInfo.IsActive() && (style & kNotebook_CloseButtonOnActiveTab)) {
-            dc.DrawBitmap(colours.closeButton, tabInfo.m_bmpCloseX + rr.GetX(), tabInfo.m_bmpCloseY);
-        }
-        // dc.DrawLine(rr.GetTopRight(), rr.GetBottomRight());
 
-    } else if(style & kNotebook_LeftTabs) {
-        dc.DrawRotatedText(tabInfo.m_label, tabInfo.m_textX, rr.GetY() + rr.GetHeight() - tabInfo.m_textY, 90.0);
-        // dc.DrawLine(rr.GetBottomLeft(), rr.GetBottomRight());
-        dc.SetPen(bgColour);
-        DRAW_LINE(rr.GetTopLeft(), rr.GetBottomLeft());
+    bool bVerticalTabs = IS_VERTICAL_TABS(style);
+    // Draw bitmap
+    if(tabInfo.GetBitmap().IsOk() && !bVerticalTabs) {
+        const wxBitmap& bmp = (!tabInfo.IsActive() && tabInfo.GetDisabledBitmp().IsOk()) ? tabInfo.GetDisabledBitmp()
+                                                                                         : tabInfo.GetBitmap();
+        dc.DrawBitmap(bmp, tabInfo.m_bmpX + rr.GetX(), tabInfo.m_bmpY + rr.GetY());
+    }
 
-    } else if(style & kNotebook_RightTabs) {
-        dc.DrawRotatedText(tabInfo.m_label, tabInfo.m_textX, rr.GetY() + rr.GetHeight() - tabInfo.m_textY, 90);
-        // dc.DrawLine(rr.GetBottomLeft(), rr.GetBottomRight());
-        dc.SetPen(bgColour);
-        DRAW_LINE(rr.GetTopRight(), rr.GetBottomRight());
+    wxString label = tabInfo.m_label;
+    if(bVerticalTabs) {
+        // Check that the text can fit into the tab label
+        int textEndCoord = tabInfo.m_textX + tabInfo.m_textWidth;
+        int tabEndCoord = tabInfo.GetRect().GetRightTop().x;
+        if(textEndCoord > tabEndCoord) {
+            int newSize = tabEndCoord - tabInfo.m_textX;
+            DrawingUtils::TruncateText(tabInfo.m_label, newSize, dc, label);
+        }
+    }
+
+    fontDC.DrawText(label, tabInfo.m_textX + rr.GetX(), tabInfo.m_textY + rr.GetY());
+    if(tabInfo.IsActive() && (style & kNotebook_CloseButtonOnActiveTab)) {
+        DrawButton(parent, dc, tabInfo, colours, buttonState);
+    }
+    if(tabInfo.IsActive()) { DrawMarker(dc, tabInfo, colours, style); }
+    // Draw the separator line
+    if(bVerticalTabs) {
+        wxPoint pt_1 = rr.GetRightBottom();
+        wxPoint pt_2 = rr.GetLeftBottom();
+        dc.SetPen(separatorColour);
+        dc.DrawLine(pt_1, pt_2);
 
     } else {
-        // Draw bitmap
-        if(tabInfo.GetBitmap().IsOk()) {
-            dc.DrawBitmap(tabInfo.GetBitmap(), tabInfo.m_bmpX + rr.GetX(), tabInfo.m_bmpY);
-        }
-        dc.DrawText(tabInfo.m_label, tabInfo.m_textX + rr.GetX(), tabInfo.m_textY);
-        if(tabInfo.IsActive() && (style & kNotebook_CloseButtonOnActiveTab)) {
-            dc.DrawBitmap(colours.closeButton, tabInfo.m_bmpCloseX + rr.GetX(), tabInfo.m_bmpCloseY);
-        }
-        // dc.DrawLine(rr.GetTopRight(), rr.GetBottomRight());
+        wxPoint pt_1 = rr.GetRightTop();
+        wxPoint pt_2 = rr.GetRightBottom();
+        dc.SetPen(separatorColour);
+        dc.DrawLine(pt_1, pt_2);
     }
 }
 
-void clTabRendererSquare::DrawBottomRect(
-    clTabInfo::Ptr_t activeTab, const wxRect& clientRect, wxDC& dc, const clTabColours& colours, size_t style)
+void clTabRendererSquare::DrawBottomRect(wxWindow* parent, clTabInfo::Ptr_t activeTab, const wxRect& clientRect,
+                                         wxDC& dc, const clTabColours& colours, size_t style)
 {
-    const int penWidth = 1;
-    wxPen pen(colours.activeTabPenColour, penWidth);
-    wxPen markerPen(colours.markerColour, penWidth);
-
-    wxPoint p1, p2;
-    dc.SetPen(pen);
-    
-    dc.SetBrush(*wxTRANSPARENT_BRUSH);
-    dc.DrawRectangle(activeTab->GetRect());
-    
-    if(style & kNotebook_BottomTabs) {
-        // draw a single line at the top
-        dc.DrawLine(clientRect.GetBottomLeft(), clientRect.GetBottomRight());
-        
-    } else {
-        // draw a single line at the top
-        dc.DrawLine(clientRect.GetTopLeft(), clientRect.GetTopRight());
-
-        p1 = activeTab->GetRect().GetTopLeft();
-        p2 = activeTab->GetRect().GetTopRight();
-    }
-
-    bool underlineTab = (style & kNotebook_UnderlineActiveTab);
-
-    pen = wxPen(colours.activeTabBgColour, penWidth);
-    
-    if(!IS_VERTICAL_TABS(style)) {
-        wxPoint delPt1, delPt2;
-        if(style & kNotebook_BottomTabs) {
-            delPt1 = activeTab->GetRect().GetBottomLeft();
-            delPt2 = activeTab->GetRect().GetBottomRight();
-            
-        } else {
-            delPt1 = activeTab->GetRect().GetTopLeft();
-            delPt2 = activeTab->GetRect().GetTopRight();
-        }
-        delPt2.x -= penWidth;
-        dc.SetPen(colours.activeTabBgColour);
-        DRAW_LINE(delPt1, delPt2);
-    }
-    
-    // Draw marker line if needed
-    if(underlineTab) {
-
-        if((style & kNotebook_LeftTabs) || (style & kNotebook_RightTabs)) {
-            p1 = activeTab->GetRect().GetTopLeft();
-            p2 = activeTab->GetRect().GetTopRight();
-            dc.SetPen(markerPen);
-            for(size_t i = 0; i < 3; ++i) {
-                DRAW_LINE(p1, p2);
-                p1.y += 1;
-                p2.y += 1;
-            }
-        } else {
-            p1 = activeTab->GetRect().GetTopLeft();
-            p2 = activeTab->GetRect().GetBottomLeft();
-            dc.SetPen(markerPen);
-
-            for(size_t i = 0; i < 3; ++i) {
-                DRAW_LINE(p1, p2);
-                p1.x += 1;
-                p2.x += 1;
-            }
-        }
-    }
+    // ClearActiveTabExtraLine(activeTab, dc, colours, style);
 }

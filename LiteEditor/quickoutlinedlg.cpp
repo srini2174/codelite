@@ -35,24 +35,16 @@
 #include <wx/wx.h>
 #endif // WX_PRECOMP
 
-#include "quickoutlinedlg.h"
-#include "drawingutils.h"
-#include "windowattrmanager.h"
 #include "cl_editor.h"
 #include "cpp_symbol_tree.h"
+#include "drawingutils.h"
 #include "macros.h"
 #include "manager.h"
+#include "quickoutlinedlg.h"
+#include "windowattrmanager.h"
 
-extern wxImageList* CreateSymbolTreeImages();
-
-///////////////////////////////////////////////////////////////////////////
-// BEGIN_EVENT_TABLE(QuickOutlineDlg, wxDialog)
-// EVT_CHAR_HOOK(QuickOutlineDlg::OnCharHook)
-// EVT_TEXT(wxID_ANY, QuickOutlineDlg::OnTextEntered)
-// END_EVENT_TABLE()
-
-QuickOutlineDlg::QuickOutlineDlg(
-    wxWindow* parent, const wxString& fileName, int id, wxString title, wxPoint pos, wxSize size, int style)
+QuickOutlineDlg::QuickOutlineDlg(wxWindow* parent, const wxString& fileName, int id, wxString title, wxPoint pos,
+                                 wxSize size, int style)
     : wxDialog(parent, id, title, pos, size, style | wxRESIZE_BORDER)
     , m_fileName(fileName)
 {
@@ -63,36 +55,20 @@ QuickOutlineDlg::QuickOutlineDlg(
     wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
     mainPanel->SetSizer(mainSizer);
 
-#ifdef __WXGTK__
-    wxColour bgCol = DrawingUtils::GetPanelBgColour();
-    wxColour fgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
-#else
-    wxColour bgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_INFOBK);
-    wxColour fgCol = wxSystemSettings::GetColour(wxSYS_COLOUR_INFOTEXT);
-#endif
-
-    mainPanel->SetBackgroundColour(bgCol);
-
     // build the outline view
     m_treeOutline =
-        new CppSymbolTree(mainPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTR_DEFAULT_STYLE | wxNO_BORDER);
-    m_keyboard.reset(new clTreeKeyboardInput(m_treeOutline));
+        new CppSymbolTree(mainPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTR_ROW_LINES | wxTR_HIDE_ROOT);
     m_treeOutline->Bind(wxEVT_KEY_DOWN, &QuickOutlineDlg::OnKeyDown, this);
-    m_treeOutline->SetBackgroundColour(bgCol);
-    m_treeOutline->SetForegroundColour(fgCol);
-    m_treeOutline->SetSymbolsImages(CreateSymbolTreeImages());
+    m_treeOutline->SetSymbolsImages(clGetManager()->GetStdIcons()->GetStandardMimeBitmapListPtr());
 
     Connect(wxEVT_CMD_CPP_SYMBOL_ITEM_SELECTED, wxCommandEventHandler(QuickOutlineDlg::OnItemSelected), NULL, this);
-    mainSizer->Add(m_treeOutline, 1, wxALL | wxEXPAND, 5);
+    mainSizer->Add(m_treeOutline, 1, wxEXPAND);
 
     SetName("QuickOutlineDlg");
     SetMinClientSize(wxSize(500, 400));
     Layout();
 
-    // no hidden root
-    m_treeOutline->BuildTree(m_fileName, TagEntryPtrVector_t());
-    m_treeOutline->ExpandAll();
-    m_treeOutline->CallAfter(&CppSymbolTree::SetFocus);
+    CallAfter(&QuickOutlineDlg::DoParseActiveBuffer);
 
     WindowAttrManager::Load(this);
     CentreOnParent();
@@ -100,7 +76,6 @@ QuickOutlineDlg::QuickOutlineDlg(
 
 QuickOutlineDlg::~QuickOutlineDlg()
 {
-    m_keyboard.reset(NULL);
     m_treeOutline->Unbind(wxEVT_KEY_DOWN, &QuickOutlineDlg::OnKeyDown, this);
 }
 
@@ -113,7 +88,24 @@ void QuickOutlineDlg::OnItemSelected(wxCommandEvent& e)
 void QuickOutlineDlg::OnKeyDown(wxKeyEvent& e)
 {
     e.Skip();
-    if(e.GetKeyCode() == WXK_ESCAPE) {
-        Close();
+    if(e.GetKeyCode() == WXK_ESCAPE) { Close(); }
+}
+
+void QuickOutlineDlg::DoParseActiveBuffer()
+{
+    IEditor* editor = clGetManager()->GetActiveEditor();
+    if(!editor) return;
+
+    wxString filename = editor->GetFileName().GetFullPath();
+    TagEntryPtrVector_t tags;
+    if(!TagsManagerST::Get()->GetFileCache()->Find(editor->GetFileName(), tags)) {
+        // Parse and update the cache
+        tags = TagsManagerST::Get()->ParseBuffer(editor->GetCtrl()->GetText(), editor->GetFileName().GetFullPath());
+        TagsManagerST::Get()->GetFileCache()->Update(editor->GetFileName(), tags);
     }
+    m_treeOutline->BuildTree(m_fileName, tags);
+    m_treeOutline->ExpandAll();
+    wxTreeItemId selectItem = m_treeOutline->GetNextItem(m_treeOutline->GetRootItem());
+    m_treeOutline->SelectItem(selectItem);
+    m_treeOutline->CallAfter(&CppSymbolTree::SetFocus);
 }

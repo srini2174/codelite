@@ -15,8 +15,8 @@
 
 VimManager::VimManager(IManager* manager, VimSettings& settings)
     : m_settings(settings)
-    , m_currentCommand()
-    , m_lastCommand()
+    , m_currentCommand(manager)
+    , m_lastCommand(manager)
     , m_tmpBuf()
     , m_editorStates()
     , m_caretInsertStyle(1)
@@ -51,7 +51,7 @@ void VimManager::OnEditorChanged(wxCommandEvent& event)
     m_currentCommand.set_ctrl(m_ctrl); // Always keep the current editor. Even when disabled. Otherwise, when opening an
                                        // editor and *then* enabling the VIM plugin, it may lead to crashes
     if(!m_settings.IsEnabled()) return;
-    IEditor* editor = reinterpret_cast<IEditor*>(event.GetClientData());
+    IEditor* editor = clGetManager()->GetActiveEditor();
     SaveOldEditorState();
 
     DoBindEditor(editor);
@@ -60,6 +60,7 @@ void VimManager::OnEditorChanged(wxCommandEvent& event)
 void VimManager::OnKeyDown(wxKeyEvent& event)
 {
 
+    int modifier_key = event.GetModifiers();
     wxChar ch = event.GetUnicodeKey();
     bool skip_event = true;
 
@@ -98,6 +99,9 @@ void VimManager::OnKeyDown(wxKeyEvent& event)
                 m_currentCommand.set_current_word(get_current_word());
                 m_currentCommand.set_current_modus(VIM_MODI::NORMAL_MODUS);
             }
+            if (modifier_key == wxMOD_CONTROL && (ch == 'U' || ch == 'D')) {
+                OnCharEvt(event);
+            }
             skip_event = true;
             break;
         }
@@ -121,6 +125,8 @@ void VimManager::OnKeyDown(wxKeyEvent& event)
         CallAfter(&VimManager::SaveCurrentEditor);
         CallAfter(&VimManager::CloseCurrentEditor);
         break;
+    default:
+        break;
     }
 }
 
@@ -139,9 +145,8 @@ void VimManager::updateView()
 
     updateCarret();
 
-    if(m_currentCommand.getError() == MESSAGES_VIM::NO_ERROR_VIM_MSG) {
-        updateMessageModus();
-    } else {
+    updateMessageModus();
+    if (m_currentCommand.getError() != MESSAGES_VIM::NO_ERROR_VIM_MSG) {
         updateVimMessage();
     }
 }
@@ -191,6 +196,9 @@ void VimManager::updateVimMessage()
     case MESSAGES_VIM::SAVE_AND_CLOSE_VIM_MSG:
         m_mgr->GetStatusBar()->SetMessage(_("Saving and Closing"));
         break;
+    case MESSAGES_VIM::SEARCHING_WORD:
+        m_mgr->GetStatusBar()->SetMessage("Searching: " + m_currentCommand.getSearchedWord());
+        break;
     default:
         m_mgr->GetStatusBar()->SetMessage("Unknown Error");
         break;
@@ -235,6 +243,7 @@ void VimManager::OnCharEvt(wxKeyEvent& event)
         switch(ch) {
         case WXK_ESCAPE:
             skip_event = m_currentCommand.OnEscapeDown();
+            if(status_vim->IsShown()) status_vim->Show(false);
             break;
         default:
             skip_event = m_currentCommand.OnNewKeyDown(ch, modifier_key);

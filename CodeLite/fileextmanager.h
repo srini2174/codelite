@@ -33,12 +33,14 @@
 #include <wx/regex.h>
 #include "smart_ptr.h"
 #include <vector>
+#include "wxStringHash.h"
 
 class WXDLLIMPEXP_CL FileExtManager
 {
 public:
     enum FileType {
-        TypeSourceC,
+        TypeOther = wxNOT_FOUND,
+        TypeSourceC, // 0
         TypeSourceCpp,
         TypeHeader,
         TypeResource,
@@ -61,6 +63,7 @@ public:
         TypeArchive,
         TypeDll,
         TypeBmp,
+        TypeSvg,
         TypeMakefile,
         TypeText,
         TypeScript,
@@ -70,7 +73,11 @@ public:
         TypeFolder,
         TypeFolderExpanded, // For UI purposes only
         TypeProjectActive,  // For UI purposes only
+        TypeProjectExpanded, // For UI purposes only
+        TypeWorkspaceFolder, // For UI purposes only
+        TypeWorkspaceFolderExpanded, // For UI purposes only
         TypeWorkspacePHP,
+        TypeWorkspaceDocker,
         TypeWorkspaceNodeJS,
         TypeWorkspacePHPTags,
         TypeWorkspaceDatabase,
@@ -78,7 +85,10 @@ public:
         TypeJava,
         TypeQMake,
         TypeCMake,
-        TypeOther = wxNOT_FOUND
+        TypeDockerfile,
+        TypeYAML,
+        TypeDatabase,
+        TypeLast,
     };
 
     struct Matcher {
@@ -108,7 +118,7 @@ public:
     };
 
 private:
-    static std::map<wxString, FileType> m_map;
+    static std::unordered_map<wxString, FileType> m_map;
     static std::vector<FileExtManager::Matcher::Ptr_t> m_matchers;
 
 public:
@@ -152,6 +162,15 @@ public:
      * @brief attempt to autodetect the file type by examining its content
      */
     static bool AutoDetectByContent(const wxString& filename, FileExtManager::FileType& fileType);
+
+    /**
+     * @brief return the file type only by checking its extension
+     */
+    static FileExtManager::FileType GetTypeFromExtension(const wxString& filename)
+    {
+        return GetTypeFromExtension(wxFileName(filename));
+    }
+    static FileExtManager::FileType GetTypeFromExtension(const wxFileName& filename);
 };
 
 #endif // __fileextmanager__

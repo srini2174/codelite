@@ -55,11 +55,11 @@ static bool _IsValidCppIndetifier(const wxString& id)
 
 static bool _IsCppKeyword(const wxString& word)
 {
-    static std::set<wxString> words;
+    static wxStringSet_t words;
     if(words.empty()) {
         TagsManager::GetCXXKeywords(words);
     }
-    return words.find(word) != words.end();
+    return words.count(word);
 }
 
 //---------------------------------------------------------
@@ -67,7 +67,7 @@ static bool _IsCppKeyword(const wxString& word)
 TagsOptionsData::TagsOptionsData()
     : clConfigItem("code-completion")
     , m_ccFlags(CC_DISP_FUNC_CALLTIP | CC_CPP_KEYWORD_ASISST | CC_COLOUR_VARS | CC_ACCURATE_SCOPE_RESOLVING |
-                CC_COLOUR_WORKSPACE_TAGS | CC_DEEP_SCAN_USING_NAMESPACE_RESOLVING | CC_WORD_ASSIST)
+                CC_DEEP_SCAN_USING_NAMESPACE_RESOLVING | CC_WORD_ASSIST)
     , m_ccColourFlags(CC_COLOUR_DEFAULT)
     , m_fileSpec(wxT("*.cpp;*.cc;*.cxx;*.h;*.hpp;*.c;*.c++;*.tcc;*.hxx;*.h++"))
     , m_minWordLen(3)
@@ -157,6 +157,9 @@ TagsOptionsData::TagsOptionsData()
     m_tokens.Add(wxT("Q_OBJECT"));
     m_tokens.Add(wxT("Q_PACKED"));
     m_tokens.Add(wxT("Q_GADGET"));
+    m_tokens.Add(wxT("QT_BEGIN_NAMESPACE"));
+    m_tokens.Add(wxT("QT_END_NAMESPACE"));
+    m_tokens.Add(wxT("Q_GADGET"));
     m_tokens.Add(wxT("QT_BEGIN_HEADER"));
     m_tokens.Add(wxT("QT_END_HEADER"));
     m_tokens.Add(wxT("Q_REQUIRED_RESULT"));
@@ -192,6 +195,9 @@ TagsOptionsData::TagsOptionsData()
     m_tokens.Add(wxT("_GLIBCXX_DEPRECATED"));
     m_tokens.Add("LLDB_API");
     m_tokens.Add("PYTHON_API");
+    m_tokens.Add("__cpp_deduction_guides=0");
+    m_tokens.Add("wxMSVC_FWD_MULTIPLE_BASES");
+    
     // libcpp macros
     m_tokens.Add("_LIBCPP_TYPE_VIS_ONLY");
     m_tokens.Add("_LIBCPP_CONSTEXPR");
@@ -199,13 +205,14 @@ TagsOptionsData::TagsOptionsData()
     m_tokens.Add("_LIBCPP_INLINE_VISIBILITY");
     m_tokens.Add("_LIBCPP_BEGIN_NAMESPACE_STD=namespace std{");
     m_tokens.Add("_LIBCPP_END_NAMESPACE_STD=}");
-
     m_types.Add(wxT("std::vector::reference=_Tp"));
     m_types.Add(wxT("std::vector::const_reference=_Tp"));
     m_types.Add(wxT("std::vector::iterator=_Tp"));
     m_types.Add(wxT("std::vector::const_iterator=_Tp"));
     m_types.Add(wxT("std::queue::reference=_Tp"));
     m_types.Add(wxT("std::queue::const_reference=_Tp"));
+    m_types.Add(wxT("std::priority_queue::reference=_Tp"));
+    m_types.Add(wxT("std::priority_queue::const_reference=_Tp"));
     m_types.Add(wxT("std::set::const_iterator=_Key"));
     m_types.Add(wxT("std::set::iterator=_Key"));
     m_types.Add(wxT("std::unordered_set::const_iterator=_Key"));
@@ -215,6 +222,7 @@ TagsOptionsData::TagsOptionsData()
     m_types.Add(wxT("std::map::iterator=std::pair<_Key, _Tp>"));
     m_types.Add(wxT("std::map::const_iterator=std::pair<_Key,_Tp>"));
     m_types.Add(wxT("std::unordered_map::iterator=std::pair<_Key, _Tp>"));
+    m_types.Add(wxT("std::unordered_map::mapped_type=_Tp"));
     m_types.Add(wxT("std::unordered_map::const_iterator=std::pair<_Key,_Tp>"));
     m_types.Add(wxT("std::unordered_map::value_type=std::pair<_Key,_Tp>"));
     m_types.Add(wxT("std::multimap::iterator=std::pair<_Key,_Tp>"));
@@ -224,13 +232,12 @@ TagsOptionsData::TagsOptionsData()
     m_types.Add(wxT("boost::shared_ptr::type=T"));
     m_types.Add(wxT("std::unique_ptr::pointer=_Tp"));
 
-    DoUpdateTokensWxMap();
-    DoUpdateTokensWxMapReversed();
+    SyncData();
 }
 
 TagsOptionsData::~TagsOptionsData() {}
 
-wxString TagsOptionsData::ToString()
+wxString TagsOptionsData::ToString() const
 {
     wxString options(wxEmptyString);
 
@@ -244,9 +251,8 @@ wxString TagsOptionsData::ToString()
         }
     }
 
-    DoUpdateTokensWxMap();
-    std::map<wxString, wxString> tokensMap = GetTokensWxMap();
-    std::map<wxString, wxString>::iterator iter = tokensMap.begin();
+    const wxStringTable_t& tokensMap = GetTokensWxMap();
+    wxStringTable_t::const_iterator iter = tokensMap.begin();
 
     if(tokensMap.empty() == false) {
         for(; iter != tokensMap.end(); ++iter) {
@@ -315,33 +321,17 @@ std::map<std::string, std::string> TagsOptionsData::GetTokensMap() const
     return tokens;
 }
 
-const std::map<wxString, wxString>& TagsOptionsData::GetTokensWxMap() const { return m_tokensWxMap; }
+const wxStringTable_t& TagsOptionsData::GetTokensWxMap() const { return m_tokensWxMap; }
 
-std::map<wxString, wxString> TagsOptionsData::GetTypesMap() const
+wxStringTable_t TagsOptionsData::GetTypesMap() const
 {
-    std::map<wxString, wxString> tokens;
+    wxStringTable_t tokens;
     for(size_t i = 0; i < m_types.GetCount(); i++) {
         wxString item = m_types.Item(i);
         item.Trim().Trim(false);
         wxString k = item.BeforeFirst(wxT('='));
         wxString v = item.AfterFirst(wxT('='));
         tokens[k] = v;
-    }
-    return tokens;
-}
-
-std::map<std::string, std::string> TagsOptionsData::GetTokensReversedMap() const
-{
-    std::map<std::string, std::string> tokens;
-    for(size_t i = 0; i < m_tokens.GetCount(); i++) {
-        wxString item = m_tokens.Item(i);
-        item.Trim().Trim(false);
-        wxString k = item.AfterFirst(wxT('='));
-        wxString v = item.BeforeFirst(wxT('='));
-
-        if(_IsValidCppIndetifier(k) && !_IsCppKeyword(k)) {
-            tokens[k.mb_str(wxConvUTF8).data()] = v.mb_str(wxConvUTF8).data();
-        }
     }
     return tokens;
 }
@@ -377,9 +367,9 @@ void TagsOptionsData::DoUpdateTokensWxMapReversed()
     }
 }
 
-const std::map<wxString, wxString>& TagsOptionsData::GetTokensReversedWxMap() const { return m_tokensWxMapReversed; }
+const wxStringTable_t& TagsOptionsData::GetTokensReversedWxMap() const { return m_tokensWxMapReversed; }
 
-void TagsOptionsData::FromJSON(const JSONElement& json)
+void TagsOptionsData::FromJSON(const JSONItem& json)
 {
     m_version = json.namedObject("version").toSize_t();
     m_ccFlags = json.namedObject(wxT("m_ccFlags")).toSize_t(m_ccFlags);
@@ -411,9 +401,9 @@ void TagsOptionsData::FromJSON(const JSONElement& json)
     m_ccFlags |= CC_ACCURATE_SCOPE_RESOLVING;
 }
 
-JSONElement TagsOptionsData::ToJSON() const
+JSONItem TagsOptionsData::ToJSON() const
 {
-    JSONElement json = JSONElement::createObject(GetName());
+    JSONItem json = JSONItem::createObject(GetName());
     json.addProperty("version", m_version);
     json.addProperty("m_ccFlags", m_ccFlags);
     json.addProperty("m_ccColourFlags", m_ccColourFlags);
@@ -440,7 +430,8 @@ JSONElement TagsOptionsData::ToJSON() const
 wxString TagsOptionsData::DoJoinArray(const wxArrayString& arr) const
 {
     wxString s;
-    for(size_t i = 0; i < arr.GetCount(); ++i) s << arr.Item(i) << "\n";
+    for(size_t i = 0; i < arr.GetCount(); ++i)
+        s << arr.Item(i) << "\n";
 
     if(s.IsEmpty() == false) s.RemoveLast();
 
@@ -459,4 +450,10 @@ void TagsOptionsData::Merge(const TagsOptionsData& tod)
         m_ccNumberOfDisplayItems = tod.m_ccNumberOfDisplayItems;
     }
     m_version = TagsOptionsData::CURRENT_VERSION;
+}
+
+void TagsOptionsData::SyncData()
+{
+    DoUpdateTokensWxMap();
+    DoUpdateTokensWxMapReversed();
 }

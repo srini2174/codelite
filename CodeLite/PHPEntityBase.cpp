@@ -43,13 +43,14 @@ PHPEntityBase::Ptr_t PHPEntityBase::FindChild(const wxString& name, bool tryPrep
     return PHPEntityBase::Ptr_t(NULL);
 }
 
-void PHPEntityBase::StoreRecursive(wxSQLite3Database& db)
+void PHPEntityBase::StoreRecursive(PHPLookupTable* lookup)
 {
-    Store(db);
+    Store(lookup);
+    
     // save the children
     PHPEntityBase::List_t::iterator iter = m_children.begin();
     for(; iter != m_children.end(); ++iter) {
-        (*iter)->StoreRecursive(db);
+        (*iter)->StoreRecursive(lookup);
     }
 }
 
@@ -89,4 +90,29 @@ void PHPEntityBase::RemoveChild(PHPEntityBase::Ptr_t child)
         m_children.erase(iter);
     }
     child->m_parent = NULL;
+}
+
+JSONItem PHPEntityBase::BaseToJSON(const wxString& entityType) const
+{
+    JSONItem json = JSONItem::createObject();
+    json.addProperty("type", entityType);
+    json.addProperty("file", m_filename.GetFullPath());
+    json.addProperty("name", m_shortName);
+    json.addProperty("fullname", m_fullname);
+    json.addProperty("doc", m_docComment);
+    json.addProperty("line", m_line);
+    json.addProperty("col", m_column);
+    json.addProperty("flags", m_flags);
+    return json;
+}
+
+void PHPEntityBase::BaseFromJSON(const JSONItem& json)
+{
+    m_filename = json.namedObject("file").toString();
+    m_shortName = json.namedObject("name").toString();
+    m_fullname = json.namedObject("fullname").toString();
+    m_docComment = json.namedObject("doc").toString();
+    m_line = json.namedObject("line").toInt(0);
+    m_column = json.namedObject("col").toInt(0);
+    m_flags = json.namedObject("flags").toSize_t(0);
 }

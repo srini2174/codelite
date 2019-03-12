@@ -196,6 +196,9 @@
             </object>
             <object class="wxMenuItem" name="wxID_SEPARATOR"/>
             <object class="wxMenuItem" name="complete_word">
+                <label>Code Comple&amp;te</label>
+            </object>
+            <object class="wxMenuItem" name="simple_word_completion">
                 <label>Complete &amp;Word</label>
             </object>
             <object class="wxMenuItem" name="function_call_tip">
@@ -224,6 +227,18 @@
             <object class="wxMenuItem" name="display_eol">
                 <label>&amp;Display EOL</label>
                 <checkable>1</checkable>
+            </object>
+            <object class="wxMenu" name="wxID_ANY">
+                <label>Zoom</label>
+                <object class="wxMenuItem" name="wxID_ZOOM_IN">
+                    <label>Zoom In</label>
+                </object>
+                <object class="wxMenuItem" name="wxID_ZOOM_OUT">
+                    <label>Zoom Out</label>
+                </object>
+                <object class="wxMenuItem" name="wxID_ZOOM_FIT">
+                    <label>Reset Zoom</label>
+                </object>
             </object>
             <object class="wxMenu" name="display_whitespaces">
                 <label>Show Whitespace</label>
@@ -256,14 +271,6 @@
                 <label>Full Screen...</label>
             </object>
             <object class="wxMenuItem" name="wxID_SEPARATOR"/>
-            <object class="wxMenuItem" name="view_welcome_page">
-                <label>Show &amp;Welcome Page</label>
-            </object>
-            <object class="wxMenuItem" name="view_welcome_page_at_startup">
-                <label>Load Welcome Page at &amp;Startup</label>
-                <checkable>1</checkable>
-            </object>
-            <object class="wxMenuItem" name="wxID_SEPARATOR"/>
             <object class="wxMenuItem" name="output_pane">
                 <label>&amp;Output Pane</label>
                 <checkable>1</checkable>
@@ -281,6 +288,7 @@
                 <checkable>1</checkable>
             </object>
             <object class="wxMenuItem" name="wxID_SEPARATOR"/>
+            <!--
             <object class="wxMenu" name="toolbars_menu">
                 <label>Tool&amp;bars</label>
                 <style>wxMENU_TEAROFF</style>
@@ -312,6 +320,7 @@
                 <object class="wxMenuItem" name="wxID_SEPARATOR"/>
             </object>
             <object class="wxMenuItem" name="wxID_SEPARATOR"/>
+-->
             <object class="wxMenuItem" name="toggle_panes">
                 <label>&amp;Toggle All Panes</label>
             </object>
@@ -325,7 +334,11 @@
                 <checkable>1</checkable>
             </object>
             <object class="wxMenuItem" name="hide_tool_bar">
-                <label>Show ToolBar</label>
+                <label>Show Tool Bar</label>
+                <checkable>1</checkable>
+            </object>
+            <object class="wxMenuItem" name="show_menu_bar">
+                <label>Show Menu Bar</label>
                 <checkable>1</checkable>
             </object>
         </object>
@@ -413,6 +426,9 @@
             <object class="wxMenuItem" name="grep_current_workspace">
                 <label>Grep Selection in the Workspace</label>
             </object>
+            <object class="wxMenuItem" name="web_search_selection">
+                <label>Search for Selection with default browser</label>
+            </object>
             <object class="wxMenuItem" name="wxID_SEPARATOR"/>
             <object class="wxMenuItem" name="find_resource">
                 <label>Find &amp;Resource...</label>
@@ -423,6 +439,9 @@
             </object>
             <object class="wxMenuItem" name="goto_definition">
                 <label>Find &amp;Symbol</label>
+            </object>
+            <object class="wxMenuItem" name="ID_GOTO_ANYTHING">
+                <label>Goto Anything</label>
             </object>
             <!-- An ID range for bookmark types. 15 is overkill, but future-proof... -->
             <ids-range name="BookmarkTypes" size="15"/>
@@ -543,6 +562,9 @@
             <object class="wxMenuItem" name="wxID_SEPARATOR"/>
             <object class="wxMenuItem" name="dbg_stepin">
                 <label>Step &amp;Into</label>
+            </object>
+            <object class="wxMenuItem" name="dbg_stepi">
+                <label>Step Into &amp;Instruction</label>
             </object>
             <object class="wxMenuItem" name="dbg_next">
                 <label>Ne&amp;xt</label>
@@ -780,6 +802,9 @@
         <object class="wxMenuItem" name="grep_current_workspace">
             <label>Search for selected text in workspace</label>
         </object>
+        <object class="wxMenuItem" name="web_search_selection">
+            <label>Search for selected text with default browser</label>
+        </object>
         <object class="wxMenu" name="editor_search">
             <label>Search</label>
             <style>wxMENU_TEAROFF</style>
@@ -924,10 +949,6 @@
             <label>New Virtual Folder</label>
         </object>
         <object class="wxMenuItem" name="wxID_SEPARATOR"/>
-        <object class="wxMenuItem" name="sort_item">
-            <label>Sort Item</label>
-        </object>
-        <object class="wxMenuItem" name="wxID_SEPARATOR"/>
         <object class="wxMenuItem" name="remove_virtual_folder">
             <label>Remove Virtual Folder</label>
         </object>
@@ -940,7 +961,6 @@
             <label>Clear Background Colour</label>
         </object>
     </object>
-    
     <!-- Workspace popup menu -->
     <object class="wxMenu" name="workspace_popup_menu">
         <object class="wxMenu" name="wxID_ANY">
@@ -995,6 +1015,11 @@
         </object>
         <object class="wxMenuItem" name="wxID_SEPARATOR"/>
         <object class="wxMenuItem" name="hide_wv_tab">
+            <label>Hide</label>
+        </object>
+    </object>
+    <object class="wxMenu" name="outputview_view_rmenu">
+        <object class="wxMenuItem" name="hide_ov_tab">
             <label>Hide</label>
         </object>
     </object>
@@ -1082,8 +1107,10 @@
             </object>
         </object>
     </object>    //File explorer
-    
-    
+
+
+
+
     
     
     <object class="wxMenu" name="file_explorer_menu">

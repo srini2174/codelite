@@ -2,6 +2,7 @@
 #include "PHPScannerTokens.h"
 #include "PHPEntityFunction.h"
 #include "PHPEntityClass.h"
+#include "PHPLookupTable.h"
 
 PHPEntityVariable::PHPEntityVariable() {}
 
@@ -77,10 +78,11 @@ wxString PHPEntityVariable::ToFuncArgString() const
     }
     return str;
 }
-void PHPEntityVariable::Store(wxSQLite3Database& db)
+void PHPEntityVariable::Store(PHPLookupTable* lookup)
 {
     if(IsFunctionArg() || IsMember() || IsDefine()) {
         try {
+            wxSQLite3Database& db = lookup->Database();
             wxSQLite3Statement statement = db.PrepareStatement(
                 "INSERT OR REPLACE INTO VARIABLES_TABLE VALUES (NULL, "
                 ":SCOPE_ID, :FUNCTION_ID, :NAME, :FULLNAME, :SCOPE, :TYPEHINT, :DEFAULT_VALUE, "
@@ -176,4 +178,21 @@ wxString PHPEntityVariable::ToTooltip() const
     } else {
         return wxEmptyString;
     }
+}
+
+void PHPEntityVariable::FromJSON(const JSONItem& json)
+{
+    BaseFromJSON(json);
+    m_typeHint = json.namedObject("type-hint").toString();
+    m_expressionHint = json.namedObject("expr-hint").toString();
+    m_defaultValue = json.namedObject("defaultValue").toString();
+}
+
+JSONItem PHPEntityVariable::ToJSON() const
+{
+    JSONItem json = BaseToJSON("v"); // type variable
+    json.addProperty("type-hint", m_typeHint);
+    json.addProperty("expr-hint", m_expressionHint);
+    json.addProperty("defaultValue", m_defaultValue);
+    return json;
 }

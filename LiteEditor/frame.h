@@ -25,50 +25,54 @@
 #ifndef LITEEDITOR_FRAME_H
 #define LITEEDITOR_FRAME_H
 
-#include "wx/combobox.h"
-#include "generalinfo.h"
-#include <wx/dcbuffer.h>
-#include <wx/process.h>
-#include "wx/aui/aui.h"
-#include "wx/frame.h"
-#include "cl_editor.h"
-#include "output_pane.h"
-#include "cl_process.h"
 #include "EnvironmentVariablesDlg.h"
-#include "wx/choice.h"
-#include "wx/timer.h"
-#include "parse_thread.h"
-#include "tags_options_dlg.h"
-#include <wx/html/htmlwin.h>
-#include "debuggerpane.h"
 #include "Notebook.h"
-#include "mainbook.h"
-#include <set>
-#include "theme_handler.h"
-#include "cl_command_event.h"
 #include "ZombieReaperPOSIX.h"
-#include "macros.h"
-#include <wx/splash.h>
-#include "clStatusBar.h"
-#include <wx/cmndata.h>
 #include "clDockingManager.h"
 #include "clMainFrameHelper.h"
+#include "clStatusBar.h"
+#include "cl_command_event.h"
+#include "cl_editor.h"
+#include "cl_process.h"
+#include "debuggerpane.h"
+#include "generalinfo.h"
+#include "macros.h"
+#include "mainbook.h"
+#include "output_pane.h"
+#include "parse_thread.h"
+#include "tags_options_dlg.h"
+#include "theme_handler.h"
+#include "wx/aui/aui.h"
+#include "wx/choice.h"
+#include "wx/combobox.h"
+#include "wx/frame.h"
+#include "wx/timer.h"
+#include <set>
+#include <wx/cmndata.h>
+#include <wx/dcbuffer.h>
+#include <wx/html/htmlwin.h>
+#include <wx/process.h>
+#include <wx/splash.h>
+#include <wx/minifram.h>
+#include <wx/infobar.h>
+#include "clInfoBar.h"
 
 // forward decls
+class DebuggerToolBar;
+class clToolBar;
+class WebUpdateJob;
 class CodeLiteApp;
 class clSingleInstanceThread;
 class wxCustomStatusBar;
 class TagEntry;
 class WorkspacePane;
 class wxToolBar;
-class Notebook;
 class OpenWindowsPanel;
 class WorkspaceTab;
 class FileExplorer;
 class OutputTabWindow;
 class DockablePaneMenuManager;
 class MyMenuBar;
-class clSplashScreen;
 
 //--------------------------------
 // Helper class
@@ -111,6 +115,7 @@ class clMainFrame : public wxFrame
     MyMenuBar* m_myMenuBar;
     wxMenu* m_bookmarksDropDownMenu;
     ThemeHandler m_themeHandler;
+    bool m_noSavePerspectivePrompt;
 
 #ifndef __WXMSW__
     ZombieReaperPOSIX m_zombieReaper;
@@ -128,8 +133,11 @@ class clMainFrame : public wxFrame
 
     // Printing
     wxPrintDialogData m_printDlgData;
-    wxToolBar* m_mainToolBar;
     clMainFrameHelper::Ptr_t m_frameHelper;
+    WebUpdateJob* m_webUpdate;
+    clToolBar* m_toolbar;
+    DebuggerToolBar* m_debuggerToolbar = nullptr;
+    clInfoBar* m_infoBar = nullptr;
 
 public:
     static bool m_initCompleted;
@@ -139,10 +147,28 @@ protected:
     void DoCreateBuildDropDownMenu(wxMenu* menu);
     void DoShowToolbars(bool show, bool update = true);
     void InitializeLogo();
-
+    
 public:
+    virtual void Raise();
     static clMainFrame* Get();
     static void Initialize(bool loadLastSession);
+    
+    clInfoBar* GetMessageBar() { return m_infoBar; }
+    
+    /**
+     * @brief goto anything..
+     */
+    void OnGotoAnything(wxCommandEvent& e);
+
+    /**
+     * @brief main book page navigation
+     */
+    void OnMainBookNavigating(wxCommandEvent& e);
+
+    /**
+     * @brief move the active tab right or left
+     */
+    void OnMainBookMovePage(wxCommandEvent& e);
 
     /**
      * @brief Return CodeLite App object
@@ -162,11 +188,6 @@ public:
 
     DockablePaneMenuManager* GetDockablePaneMenuManager() { return m_DPmenuMgr; }
     //--------------------- debuger---------------------------------
-    /**
-     * @brief launch TTY
-     */
-    wxString StartTTY(const wxString& title);
-
     //---------------------------------------------------------------
 
     /**
@@ -216,7 +237,7 @@ public:
      * @brief
      * @param editor
      */
-    void SetFrameTitle(LEditor* editor);
+    void SetFrameTitle(clEditor* editor);
 
     MainBook* GetMainBook() const { return m_mainBook; }
 
@@ -265,7 +286,6 @@ public:
      */
     void CompleteInitialization();
 
-    void RegisterToolbar(int menuItemId, const wxString& name);
     void RegisterDockWindow(int menuItemId, const wxString& name);
 
     const GeneralInfo& GetFrameGeneralInfo() const { return m_frameGeneralInfo; }
@@ -278,11 +298,6 @@ public:
      * @param projectName
      */
     void RebuildProject(const wxString& projectName);
-
-    /**
-     * @brief display the welcome page
-     */
-    void ShowWelcomePage();
 
     /**
      * @brief handle custom build targets events
@@ -315,8 +330,8 @@ public:
 private:
     // make our frame's constructor private
     clMainFrame(wxWindow* pParent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size,
-        long style = wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX | wxCAPTION | wxSYSTEM_MENU | wxRESIZE_BORDER |
-            wxCLIP_CHILDREN);
+                long style = wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX | wxCAPTION | wxSYSTEM_MENU |
+                             wxRESIZE_BORDER | wxCLIP_CHILDREN);
     wxString CreateWorkspaceTable();
     wxString CreateFilesTable();
     void StartTimer();
@@ -344,14 +359,8 @@ private:
     void OnSplitSelectionUI(wxUpdateUIEvent& event);
 
     /// Toolbar management
-    void CreateToolbars24();
-    void CreateToolbars16();
-    void CreateNativeToolbar24();
-    void CreateNativeToolbar16();
+    void CreateToolBar(int toolSize);
     void ToggleToolBars(bool all);
-
-    void SetToolBar(wxToolBar* tb);
-
     void ViewPaneUI(const wxString& paneName, wxUpdateUIEvent& event);
     void CreateRecentlyOpenedFilesMenu();
     void CreateWelcomePage();
@@ -365,17 +374,33 @@ private:
      */
     bool StartSetupWizard();
 
+    /**
+     * @brief see if the wizard changed developer profile
+     * @return true if the 'Save Perspective' dialog should not be shown
+     */
+    bool GetAndResetNoSavePerspectivePrompt()
+    {
+        bool ans = m_noSavePerspectivePrompt;
+        m_noSavePerspectivePrompt = false;
+        return ans;
+    }
+    /**
+     * @brief mark not to show the 'Save Perspective' dialog on next close
+     */
+    void SetNoSavePerspectivePrompt(bool devProfileChanged) { m_noSavePerspectivePrompt = devProfileChanged; }
+
     void DoShowCaptions(bool show);
 
 public:
     void ViewPane(const wxString& paneName, bool checked);
     void ShowOrHideCaptions();
-    wxToolBar* GetMainToolBar() const { return m_mainToolBar; }
+    clToolBar* GetMainToolBar() const { return m_toolbar; }
 
 protected:
     //----------------------------------------------------
     // event handlers
     //----------------------------------------------------
+    void OnInfobarButton(wxCommandEvent& event);
     void OnDebugStarted(clDebugEvent& event);
     void OnDebugEnded(clDebugEvent& event);
 
@@ -384,7 +409,7 @@ protected:
     void OnBuildEnded(clCommandEvent& event);
     void OnQuit(wxCommandEvent& WXUNUSED(event));
     void OnClose(wxCloseEvent& event);
-
+    void OnCustomiseToolbar(wxCommandEvent& event);
     void OnSave(wxCommandEvent& event);
     void OnDuplicateTab(wxCommandEvent& event);
     void OnFileSaveUI(wxUpdateUIEvent& event);
@@ -392,8 +417,10 @@ protected:
     void OnFileReload(wxCommandEvent& event);
     void OnFileLoadTabGroup(wxCommandEvent& event);
     void OnNativeTBUnRedoDropdown(wxCommandEvent& event);
-    void OnTBUnRedo(wxAuiToolBarEvent& event);
-    void OnCompleteWord(wxCommandEvent& event);
+    void OnTBUnRedo(wxCommandEvent& event);
+    void OnTBUnRedoMenu(wxCommandEvent& event);
+    void OnCodeComplete(wxCommandEvent& event);
+    void OnWordComplete(wxCommandEvent& event);
     void OnCompleteWordRefreshList(wxCommandEvent& event);
     void OnFunctionCalltip(wxCommandEvent& event);
     void OnAbout(wxCommandEvent& event);
@@ -419,7 +446,6 @@ protected:
     void OnPrint(wxCommandEvent& event);
     void OnPageSetup(wxCommandEvent& event);
     void OnRecentWorkspaceUI(wxUpdateUIEvent& e);
-
     void OnViewOptions(wxCommandEvent& event);
     void OnToggleMainTBars(wxCommandEvent& event);
     void OnTogglePluginTBars(wxCommandEvent& event);
@@ -430,6 +456,8 @@ protected:
     void OnShowStatusBarUI(wxUpdateUIEvent& event);
     void OnShowToolbar(wxCommandEvent& event);
     void OnShowToolbarUI(wxUpdateUIEvent& event);
+    void OnShowMenuBar(wxCommandEvent& event);
+    void OnShowMenuBarUI(wxUpdateUIEvent& event);
     void OnShowTabBar(wxCommandEvent& event);
     void OnShowTabBarUI(wxUpdateUIEvent& event);
     void OnProjectNewWorkspace(wxCommandEvent& event);
@@ -450,7 +478,7 @@ protected:
     void OnCtagsOptions(wxCommandEvent& event);
     void OnBuildProject(wxCommandEvent& event);
     void OnBuildProjectOnly(wxCommandEvent& event);
-    void OnShowAuiBuildMenu(wxAuiToolBarEvent& e);
+    void OnShowBuildMenu(wxCommandEvent& e);
     void OnBuildAndRunProject(wxCommandEvent& event);
     void OnRebuildProject(wxCommandEvent& event);
     void OnRetagWorkspace(wxCommandEvent& event);
@@ -491,9 +519,11 @@ protected:
     void OnPreviousFiFMatchUI(wxUpdateUIEvent& e);
     void OnGrepWord(wxCommandEvent& e);
     void OnGrepWordUI(wxUpdateUIEvent& e);
+    void OnWebSearchSelection(wxCommandEvent& e);
+    void OnWebSearchSelectionUI(wxUpdateUIEvent& e);
     void OnThemeChanged(wxCommandEvent& e);
     void OnEnvironmentVariablesModified(clCommandEvent& e);
-    
+
     // handle symbol tree events
     void OnParsingThreadMessage(wxCommandEvent& e);
     void OnDatabaseUpgrade(wxCommandEvent& e);
@@ -537,10 +567,6 @@ protected:
     void OnDebuggerSettings(wxCommandEvent& e);
     void OnLinkClicked(wxHtmlLinkEvent& e);
     void OnLoadSession(wxCommandEvent& e);
-    void OnShowWelcomePage(wxCommandEvent& event);
-    void OnShowWelcomePageUI(wxUpdateUIEvent& event);
-    void OnLoadWelcomePage(wxCommandEvent& event);
-    void OnLoadWelcomePageUI(wxUpdateUIEvent& event);
     void OnAppActivated(wxActivateEvent& event);
     void OnReloadExternallModified(wxCommandEvent& e);
     void OnReloadExternallModifiedNoPrompt(wxCommandEvent& e);
@@ -578,6 +604,7 @@ protected:
     void OnViewPaneUI(wxUpdateUIEvent& event);
     void OnDetachWorkspaceViewTab(wxCommandEvent& e);
     void OnHideWorkspaceViewTab(wxCommandEvent& e);
+    void OnHideOutputViewTab(wxCommandEvent& e);
     void OnDetachDebuggerViewTab(wxCommandEvent& e);
     void OnNewDetachedPane(wxCommandEvent& e);
     void OnDestroyDetachedPane(wxCommandEvent& e);
@@ -588,6 +615,7 @@ protected:
     void OnConfigureAccelerators(wxCommandEvent& e);
     void OnStartPageEvent(wxCommandEvent& e);
     void OnNewVersionAvailable(wxCommandEvent& e);
+    void OnVersionCheckError(wxCommandEvent& e);
     void OnGotoCodeLiteDownloadPage(wxCommandEvent& e);
     void OnBatchBuild(wxCommandEvent& e);
     void OnBatchBuildUI(wxUpdateUIEvent& e);
@@ -613,16 +641,19 @@ protected:
     // Misc
     void OnActivateEditor(wxCommandEvent& e);
     void OnActiveEditorChanged(wxCommandEvent& e);
-    void OnUpdateCustomTargetsDropDownMenu(wxCommandEvent& e);
     void OnWorkspaceLoaded(wxCommandEvent& e);
     void OnRefactoringCacheStatus(wxCommandEvent& e);
     void OnWorkspaceClosed(wxCommandEvent& e);
     void OnChangeActiveBookmarkType(wxCommandEvent& e);
-    void OnShowBookmarkMenu(wxAuiToolBarEvent& e);
     void OnSettingsChanged(wxCommandEvent& e);
     void OnEditMenuOpened(wxMenuEvent& e);
     void OnProjectRenamed(clCommandEvent& event);
 
+    // Search handlers
+    void OnFindSelection(wxCommandEvent& event);
+    void OnFindSelectionPrev(wxCommandEvent& event);
+    void OnFindWordAtCaret(wxCommandEvent& event);
+    void OnFindWordAtCaretPrev(wxCommandEvent& event);
     DECLARE_EVENT_TABLE()
 };
 

@@ -31,10 +31,10 @@
 #include "cl_editor.h"
 #include "cl_command_event.h"
 #include <wx/event.h>
-#include "CompileCommandsCreateor.h"
 #include "CxxPreProcessorThread.h"
 #include "CxxPreProcessorCache.h"
 #include "CxxUsingNamespaceCollectorThread.h"
+#include <thread>
 
 class CodeCompletionManager : public wxEvtHandler
 {
@@ -44,24 +44,31 @@ protected:
     bool m_buildInProgress;
     CxxPreProcessorThread m_preProcessorThread;
     CxxUsingNamespaceCollectorThread m_usingNamespaceThread;
+    std::thread* m_compileCommandsThread = nullptr;
+    wxFileName m_compileCommands;
+    time_t m_compileCommandsLastModified = 0;
 
 protected:
     /// ctags implementions
-    bool DoCtagsWordCompletion(LEditor* editor, const wxString& expr, const wxString& word);
-    bool DoCtagsCalltip(LEditor* editor, int line, const wxString& expr, const wxString& text, const wxString& word);
-    bool DoCtagsCodeComplete(LEditor* editor, int line, const wxString& expr, const wxString& text);
-    bool DoCtagsGotoImpl(LEditor* editor);
-    bool DoCtagsGotoDecl(LEditor* editor);
+    bool DoCtagsWordCompletion(clEditor* editor, const wxString& expr, const wxString& word);
+    bool DoCtagsCalltip(clEditor* editor, int line, const wxString& expr, const wxString& text, const wxString& word);
+    bool DoCtagsCodeComplete(clEditor* editor, int line, const wxString& expr, const wxString& text);
+    bool DoCtagsGotoImpl(clEditor* editor);
+    bool DoCtagsGotoDecl(clEditor* editor);
 
     /// clang implementations
-    void DoClangWordCompletion(LEditor* editor);
-    void DoClangCalltip(LEditor* editor);
-    void DoClangCodeComplete(LEditor* editor);
-    void DoClangGotoImpl(LEditor* editor);
-    void DoClangGotoDecl(LEditor* editor);
+    void DoClangWordCompletion(clEditor* editor);
+    void DoClangCalltip(clEditor* editor);
+    void DoClangCodeComplete(clEditor* editor);
+    void DoClangGotoImpl(clEditor* editor);
+    void DoClangGotoDecl(clEditor* editor);
 
     void DoUpdateOptions();
     void DoUpdateCompilationDatabase();
+    void DoProcessCompileCommands();
+    static void ThreadProcessCompileCommandsEntry(CodeCompletionManager* owner, const wxString& rootFolder);
+    void CompileCommandsFileProcessed(const wxArrayString& includePaths);
+    size_t CreateBlockCommentKeywordsList(wxCodeCompletionBoxEntry::Vec_t& entries) const;
 
 protected:
     // Event handlers
@@ -73,8 +80,10 @@ protected:
     void OnFileLoaded(clCommandEvent& event);
     void OnWorkspaceConfig(wxCommandEvent& event);
     void OnWorkspaceClosed(wxCommandEvent& event);
-    void OnEnvironmentVariablesModified(clCommandEvent &event);
-    
+    void OnEnvironmentVariablesModified(clCommandEvent& event);
+    void OnBlockCommentCodeComplete(clCodeCompletionEvent& event);
+    void OnBlockCommentWordComplete(clCodeCompletionEvent& event);
+
 public:
     CodeCompletionManager();
     virtual ~CodeCompletionManager();
@@ -101,14 +110,15 @@ public:
     static CodeCompletionManager& Get();
     static void Release();
 
-    void WordCompletion(LEditor* editor, const wxString& expr, const wxString& word);
-    void Calltip(LEditor* editor, int line, const wxString& expr, const wxString& text, const wxString& word);
-    void CodeComplete(LEditor* editor, int line, const wxString& expr, const wxString& text);
-    void ProcessMacros(LEditor* editor);
-    void ProcessUsingNamespace(LEditor* editor);
-    void GotoImpl(LEditor* editor);
-    void GotoDecl(LEditor* editor);
-    bool GetDefinitionsAndSearchPaths(LEditor* editor, wxArrayString& searchPaths, wxArrayString& definitions);
+    void WordCompletion(clEditor* editor, const wxString& expr, const wxString& word);
+    void Calltip(clEditor* editor, int line, const wxString& expr, const wxString& text, const wxString& word);
+    void CodeComplete(clEditor* editor, int line, const wxString& expr, const wxString& text);
+    void ProcessMacros(clEditor* editor);
+    void ProcessUsingNamespace(clEditor* editor);
+    void GotoImpl(clEditor* editor);
+    void GotoDecl(clEditor* editor);
+    bool GetDefinitionsAndSearchPaths(clEditor* editor, wxArrayString& searchPaths, wxArrayString& definitions);
+    void UpdateParserPaths();
 };
 
 #endif // CODECOMPLETIONMANAGER_H

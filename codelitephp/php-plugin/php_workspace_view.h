@@ -26,15 +26,15 @@
 #ifndef __php_workspace_view__
 #define __php_workspace_view__
 
+#include "clFileSystemEvent.h"
+#include "php_event.h"
 #include "php_ui.h"
 #include "php_workspace.h"
-#include <set>
-#include <bitmap_loader.h>
-#include "php_event.h"
-#include <cl_command_event.h>
+#include "wxStringHash.h"
 #include "wx_ordered_map.h"
-#include "clTreeKeyboardInput.h"
-#include "clFileSystemEvent.h"
+#include <bitmap_loader.h>
+#include <cl_command_event.h>
+#include <set>
 
 class IManager;
 class ItemData;
@@ -42,13 +42,11 @@ class ItemData;
 class PHPWorkspaceView : public PHPWorkspaceViewBase
 {
     IManager* m_mgr;
-    BitmapLoader::BitmapMap_t m_bitmaps;
-    wxOrderedMap<wxTreeItemId, bool> m_itemsToSort;
-    std::map<wxString, wxTreeItemId> m_filesItems;
-    std::map<wxString, wxTreeItemId> m_foldersItems;
-    clTreeKeyboardInput::Ptr_t m_keyboardHelper;
+    std::unordered_map<wxString, wxTreeItemId> m_filesItems;
+    std::unordered_map<wxString, wxTreeItemId> m_foldersItems;
     bool m_scanInProgress;
-    std::set<wxString> m_pendingSync;
+    std::unordered_set<wxString> m_pendingSync;
+    wxArrayString m_draggedFiles;
 
 private:
     enum {
@@ -57,17 +55,17 @@ private:
 
 protected:
     virtual void OnCollapse(wxCommandEvent& event);
-    virtual void DoCollapseItem(wxTreeItemId& item);
     void OnFolderDropped(clCommandEvent& event);
 
     virtual void OnCollapseUI(wxUpdateUIEvent& event);
     virtual void OnStartDebuggerListenerUI(wxUpdateUIEvent& event);
-    virtual void OnSetupRemoteUploadUI(wxUpdateUIEvent& event);
     virtual void OnItemActivated(wxTreeEvent& event);
     virtual void OnMenu(wxTreeEvent& event);
     void OnWorkspaceLoaded(PHPEvent& event);
 #if USE_SFTP
-    virtual void OnSetupRemoteUpload(wxAuiToolBarEvent& event);
+    virtual void OnSetupRemoteUploadUI(wxUpdateUIEvent& event);
+    virtual void OnSetupRemoteUpload(wxCommandEvent& event);
+    virtual void OnSetupRemoteUploadMenu(wxCommandEvent& event);
 #endif
     virtual void OnWorkspaceOpenUI(wxUpdateUIEvent& event);
     virtual void OnActiveProjectSettings(wxCommandEvent& event);
@@ -78,7 +76,6 @@ protected:
     void DoSetStatusBarText(const wxString& text, int timeOut);
 
     // Helpers
-    void DoSortItems();
     wxTreeItemId DoAddFolder(const wxString& project, const wxString& path);
     wxTreeItemId DoCreateFile(const wxTreeItemId& parent, const wxString& fullpath, const wxString& content = "");
     wxTreeItemId DoGetProject(const wxString& project);
@@ -91,7 +88,6 @@ protected:
     const ItemData* DoGetItemData(const wxTreeItemId& item) const;
     bool IsFolderItem(const wxTreeItemId& item);
     int DoGetItemImgIdx(const wxString& filename);
-    wxBitmap DoGetBitmapForExt(const wxString& ext) const;
     void DoDeleteSelectedFileItem();
 #if USE_SFTP
     void DoOpenSSHAccountManager();
@@ -103,25 +99,25 @@ protected:
      * @param project
      */
     void DoBuildProjectNode(const wxTreeItemId& projectItem, PHPProject::Ptr_t project);
-    
+
     /**
      * @brief return list of files and folders for a given project
      */
     void DoGetFilesAndFolders(const wxString& projectName, wxArrayString& folders, wxArrayString& files);
     void DoGetFilesAndFolders(const wxTreeItemId& parent, wxArrayString& folders, wxArrayString& files);
-    
+
     /**
      * @brief open an item into an editor
      */
     void DoOpenFile(const wxTreeItemId& item);
 
     void DoSetProjectActive(const wxString& projectName);
-    
+
     /**
      * @brief expand the tree view to highlight the active editor
      */
     void DoExpandToActiveEditor();
-    
+
 protected:
     // Handlers for PHPWorkspaceViewBase events.
 
@@ -159,11 +155,12 @@ protected:
     void OnEditorChanged(wxCommandEvent& e);
     void OnFileRenamed(PHPEvent& e);
     void OnWorkspaceRenamed(PHPEvent& e);
-    void OnFindInFilesShowing(clCommandEvent& e);
+    void OnFindInFilesShowing(clFindInFilesEvent& e);
+    void OnFindInFilesDismissed(clFindInFilesEvent& e);
     void OnToggleAutoUpload(wxCommandEvent& e);
     void OnStartDebuggerListener(wxCommandEvent& e);
     void OnProjectSyncCompleted(clCommandEvent& event);
-    
+
     // Php parser events
     void OnPhpParserStarted(clParseEvent& event);
     void OnPhpParserProgress(clParseEvent& event);
@@ -173,6 +170,10 @@ protected:
     void OnWorkspaceSyncStart(clCommandEvent& event);
     void OnWorkspaceSyncEnd(clCommandEvent& event);
     void OnFileSaveAs(clFileSystemEvent& event);
+
+    // DnD
+    void OnDragBegin(wxTreeEvent& event);
+    void OnDragEnd(wxTreeEvent& event);
 
 public:
     /** Constructor */

@@ -35,6 +35,9 @@ class WXDLLIMPEXP_SDK SFTPSettings : public clConfigItem
     SSHAccountInfo::Vect_t m_accounts;
     wxString m_sshClient;
 
+private:
+    void MSWImportPuTTYAccounts();
+
 public:
     SFTPSettings();
     virtual ~SFTPSettings();
@@ -54,8 +57,8 @@ public:
     SFTPSettings& Save();
 
 public:
-    virtual void FromJSON(const JSONElement& json);
-    virtual JSONElement ToJSON() const;
+    virtual void FromJSON(const JSONItem& json);
+    virtual JSONItem ToJSON() const;
 };
 #endif // USE_SFTP
 #endif // SFTPSETTINGS_H

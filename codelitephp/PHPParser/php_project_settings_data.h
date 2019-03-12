@@ -28,7 +28,7 @@
 
 #include <wx/string.h>
 #include <wx/arrstr.h>
-#include <json_node.h>
+#include "JSON.h"
 #include <macros.h>
 #include "XDebugBreakpoint.h"
 
@@ -45,7 +45,7 @@ protected:
     wxString m_ccIncludePath;
     wxString m_phpIniFile;
     size_t m_flags;
-    JSONElement::wxStringMap_t m_fileMapping;
+    wxStringMap_t m_fileMapping;
 
 public:
     enum {
@@ -63,8 +63,8 @@ public:
     PHPProjectSettingsData();
     virtual ~PHPProjectSettingsData();
 
-    void FromJSON(const JSONElement& ele);
-    JSONElement ToJSON() const;
+    void FromJSON(const JSONItem& ele);
+    JSONItem ToJSON() const;
 
     void EnableFlag(int flag, bool b)
     {
@@ -87,8 +87,8 @@ public:
      * fileMapping of the project
      */
     wxString GetMappdPath(const wxString& sourcePath, bool useUrlScheme, const wxStringMap_t& additionalMapping) const;
-    const JSONElement::wxStringMap_t& GetFileMapping() const { return m_fileMapping; }
-    void SetFileMapping(const JSONElement::wxStringMap_t& fileMapping) { this->m_fileMapping = fileMapping; }
+    const wxStringMap_t& GetFileMapping() const { return m_fileMapping; }
+    void SetFileMapping(const wxStringMap_t& fileMapping) { this->m_fileMapping = fileMapping; }
     void SetPhpIniFile(const wxString& phpIniFile) { this->m_phpIniFile = phpIniFile; }
     const wxString& GetPhpIniFile() const { return m_phpIniFile; }
     void SetPauseWhenExeTerminates(bool pauseWhenExeTerminates)

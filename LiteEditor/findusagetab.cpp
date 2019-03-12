@@ -41,7 +41,7 @@ FindUsageTab::FindUsageTab(wxWindow* parent, const wxString& name)
     m_styler->SetStyles(m_sci);
     m_sci->HideSelection(true);
     m_sci->Connect(wxEVT_STC_STYLENEEDED, wxStyledTextEventHandler(FindUsageTab::OnStyleNeeded), NULL, this);
-    m_tb->DeleteTool(XRCID("repeat_output"));
+    m_tb->DeleteById(XRCID("repeat_output"));
     m_tb->Realize();
     EventNotifier::Get()->Connect(
         wxEVT_CL_THEME_CHANGED, wxCommandEventHandler(FindUsageTab::OnThemeChanged), NULL, this);
@@ -91,7 +91,7 @@ void FindUsageTab::OnMouseDClick(wxStyledTextEvent& e)
 
 void FindUsageTab::OnClearAllUI(wxUpdateUIEvent& e) { e.Enable(m_sci && m_sci->GetLength()); }
 
-void FindUsageTab::ShowUsage(const std::list<CppToken>& matches, const wxString& searchWhat)
+void FindUsageTab::ShowUsage(const CppToken::Vec_t& matches, const wxString& searchWhat)
 {
     Clear();
     int lineNumber(0);
@@ -103,8 +103,8 @@ void FindUsageTab::ShowUsage(const std::list<CppToken>& matches, const wxString&
     text = wxString::Format(_("===== Finding references of '%s' =====\n"), searchWhat.c_str());
     lineNumber++;
 
-    std::list<CppToken>::const_iterator iter = matches.begin();
-    for(; iter != matches.end(); iter++) {
+    CppToken::Vec_t::const_iterator iter = matches.begin();
+    for(; iter != matches.end(); ++iter) {
 
         // Print the line number
         wxString file_name(iter->getFilename());
@@ -160,7 +160,7 @@ void FindUsageTab::ShowUsage(const std::list<CppToken>& matches, const wxString&
 void FindUsageTab::DoOpenResult(const CppToken& token)
 {
     if(!token.getFilename().empty()) {
-        LEditor* editor =
+        clEditor* editor =
             clMainFrame::Get()->GetMainBook()->OpenFile(token.getFilename(), wxEmptyString, token.getLineNumber());
         if(editor) {
             editor->SetLineVisible(token.getLineNumber());

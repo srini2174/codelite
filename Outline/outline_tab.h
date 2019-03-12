@@ -26,11 +26,11 @@
 #ifndef SYMBOLVIEWTABPANEL_H
 #define SYMBOLVIEWTABPANEL_H
 
-#include "wxcrafter.h"
-#include "theme_handler_helper.h"
 #include "cl_command_event.h"
-#include "clTreeKeyboardInput.h"
+#include "theme_handler_helper.h"
+#include "wxcrafter.h"
 
+class clToolBar;
 class IManager;
 class svSymbolTree;
 
@@ -41,9 +41,11 @@ protected:
     svSymbolTree* m_tree;
     ThemeHandlerHelper* m_themeHelper;
     wxFileName m_phpFile;
-    clTreeKeyboardInput::Ptr_t m_phpKeyboardHelper;
-    clTreeKeyboardInput::Ptr_t m_cxxKeyboardHelper;
     bool m_sortCxxTreeAlphabetically;
+    clToolBar* m_toolbar;
+
+public:
+    bool m_isEnabled;
 
 protected:
     virtual void OnSortAlpha(wxCommandEvent& event);
@@ -59,6 +61,7 @@ public:
     virtual ~OutlineTab();
     void OnSearchSymbol(wxCommandEvent& event);
     void OnSearchEnter(wxCommandEvent& event);
+    void EditorChanged();
 
     // Event Handlers
     ////////////////////////////////////////////////

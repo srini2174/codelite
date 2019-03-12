@@ -38,6 +38,8 @@
 #include <map>
 #include "plugindata.h"
 
+class clToolBar;
+class clEditorBar;
 class wxBookCtrlBase;
 class EnvironmentConfig;
 class JobQueue;
@@ -78,14 +80,15 @@ public:
     //------------------------------------
     void EnableClangCodeCompletion(bool b);
     IEditor* GetActiveEditor();
+    clToolBar* GetToolBar();
     IConfigTool* GetConfigTool();
     TreeItemInfo GetSelectedTreeItemInfo(TreeType type);
-    wxTreeCtrl* GetTree(TreeType type);
+    clTreeCtrl* GetFileExplorerTree();
+    clTreeCtrl* GetWorkspaceTree();
     Notebook* GetOutputPaneNotebook();
     Notebook* GetWorkspacePaneNotebook();
     IEditor* OpenFile(const wxString& fileName, const wxString& projectName = wxEmptyString, int lineno = wxNOT_FOUND);
-    IEditor* OpenFile(
-        const wxString& fileName, const wxBitmap& bmp, const wxString& tooltip = wxEmptyString);
+    IEditor* OpenFile(const wxString& fileName, const wxBitmap& bmp, const wxString& tooltip = wxEmptyString);
     IEditor* OpenFile(const BrowseRecord& rec);
     wxString GetStartupDirectory() const;
     void AddProject(const wxString& path);
@@ -117,6 +120,7 @@ public:
     void StopAndClearQueue();
     bool IsBuildInProgress() const;
     bool IsBuildEndedSuccessfully() const;
+    wxString GetProjectNameByFile(wxString& fullPathFileName);
     wxString GetProjectNameByFile(const wxString& fullPathFileName);
     BuildManager* GetBuildManager();
     BuildSettingsConfig* GetBuildSettingsConfigManager();
@@ -124,7 +128,7 @@ public:
     bool ClosePage(const wxFileName& filename);
     wxWindow* FindPage(const wxString& text);
     bool AddPage(wxWindow* win, const wxString& text, const wxString& tooltip = wxEmptyString,
-        const wxBitmap& bmp = wxNullBitmap, bool selected = false);
+                 const wxBitmap& bmp = wxNullBitmap, bool selected = false);
     bool SelectPage(wxWindow* win);
     NavMgr* GetNavigationMgr();
     IEditor* NewEditor();
@@ -160,9 +164,16 @@ public:
     void ShowOutputPane(const wxString& selectedWindow = "");
     void ToggleOutputPane(const wxString& selectedWindow = "");
     clStatusBar* GetStatusBar();
+    clEditorBar* GetNavigationBar();
     clWorkspaceView* GetWorkspaceView();
     bool IsToolBarShown() const;
     void ShowToolBar(bool show = true);
+
+    /**
+     * @brief display message to the user using the info bar
+     */
+    virtual void DisplayMessage(const wxString& message, int flags = wxICON_INFORMATION,
+                                const std::vector<std::pair<wxWindowID, wxString> >& buttons = {});
 
     //------------------------------------
     // End of IManager interface
@@ -173,8 +184,8 @@ public:
 
     // (Un)Hook the project settings tab
     virtual void HookProjectSettingsTab(wxBookCtrlBase* book, const wxString& projectName, const wxString& configName);
-    virtual void UnHookProjectSettingsTab(
-        wxBookCtrlBase* book, const wxString& projectName, const wxString& configName);
+    virtual void UnHookProjectSettingsTab(wxBookCtrlBase* book, const wxString& projectName,
+                                          const wxString& configName);
 };
 
 #endif // PLUGINMANAGER_H

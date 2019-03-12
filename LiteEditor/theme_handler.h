@@ -30,21 +30,22 @@
 #include <wx/stc/stc.h>
 #include "plugin.h"
 #include "theme_handler_helper.h"
+#include "cl_command_event.h"
 
 class ThemeHandler : public wxEvtHandler
 {
     ThemeHandlerHelper::Ptr m_helper;
 
 protected:
-    void DoUpdateColours(wxWindow* win, const wxColour& bg, const wxColour& fg);
-    void DoUpdateAuiToolBars(wxWindow* win);
-    void DoUpdateSTCBgColour(wxStyledTextCtrl* stc);
+    void UpdateColours();
 
 public:
     ThemeHandler();
     virtual ~ThemeHandler();
-
+    
+    void UpdateNotebookColours(wxWindow* parent);
     void OnEditorThemeChanged(wxCommandEvent& e);
+    void OnColoursChanged(clCommandEvent& e);
     void OnInitDone(wxCommandEvent& e);
 };
 

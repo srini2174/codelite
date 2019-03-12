@@ -1,6 +1,6 @@
-@echo on
+@echo OFF
 
-set TARGET_DIR=C:\ProgramFiles\cl
+set TARGET_DIR=%ProgramFiles%
 set COPY_WXC_RESOURCES=0
 ::IF EXIST D:\software\NUL (set TARGET_DIR=D:\software)
 IF EXIST ..\wxcrafter\wxcrafter.accelerators (set COPY_WXC_RESOURCES=1)
@@ -24,21 +24,18 @@ xcopy templates\codedesigner\* "%TARGET_DIR%\CodeLite\templates\codedesigner\" /
 xcopy templates\databaselayer\* "%TARGET_DIR%\CodeLite\templates\databaselayer\" /E /I /H /Y /EXCLUDE:excludes
 xcopy templates\qmake\* "%TARGET_DIR%\CodeLite\templates\qmake\" /E /I /H /Y /EXCLUDE:excludes
 xcopy *.html "%TARGET_DIR%\CodeLite\" /H /Y /EXCLUDE:excludes
-xcopy codelite-icons.zip "%TARGET_DIR%\CodeLite\" /H /Y /EXCLUDE:excludes
-xcopy codelite-bitmaps.zip "%TARGET_DIR%\CodeLite\" /H /Y /EXCLUDE:excludes
-xcopy codelite-icons-dark.zip "%TARGET_DIR%\CodeLite\" /H /Y /EXCLUDE:excludes
-xcopy codelite-icons-fresh-farm.zip "%TARGET_DIR%\CodeLite\" /H /Y /EXCLUDE:excludes
+xcopy codelite-bitmaps-dark.zip "%TARGET_DIR%\CodeLite\" /H /Y /EXCLUDE:excludes
+xcopy codelite-bitmaps-light.zip "%TARGET_DIR%\CodeLite\" /H /Y /EXCLUDE:excludes
 xcopy locale\* "%TARGET_DIR%\CodeLite\locale\" /E /I /H /Y /EXCLUDE:excludes
 xcopy ..\lib\gcc_lib\libdatabaselayersqlite*.dll "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
 xcopy ..\lib\gcc_lib\libwxshapeframework*.dll "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
 IF EXIST wxgui.zip ( copy wxgui.zip "%TARGET_DIR%\CodeLite\" )
 IF EXIST PHP.zip ( copy PHP.zip "%TARGET_DIR%\CodeLite\" )
-IF EXIST ..\WebTools\javascript-win.zip ( copy ..\WebTools\javascript-win.zip "%TARGET_DIR%\CodeLite\" )
 
 if "%WXWIN%" == "" GOTO OTHERS
-xcopy %WXWIN%\lib\gcc510TDM_x64_dll\wxmsw*u_*gcc*_*.dll "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
-xcopy %WXWIN%\lib\gcc510TDM_x64_dll\wxbase*u_*gcc*_*.dll "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
-:: xcopy %WXWIN%\lib\gcc*_dll\wxrc.exe "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
+xcopy %WXWIN%\lib\gcc_dll\wxmsw*u_*gcc_cl.dll "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
+xcopy %WXWIN%\lib\gcc_dll\wxbase*u_*gcc_cl.dll "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
+:: xcopy %WXWIN%\lib\gcc_dll\wxrc.exe "%TARGET_DIR%\CodeLite\" /E /I /H /Y /EXCLUDE:excludes
 
 if "%COPY_WXC_RESOURCES%" == "1" (copy ..\wxcrafter\wxcrafter.accelerators  "%TARGET_DIR%\CodeLite\plugins\resources" )
 
@@ -49,9 +46,8 @@ copy codelite-cc.exe "%TARGET_DIR%\CodeLite\" /Y
 copy codelite_cppcheck.exe "%TARGET_DIR%\CodeLite\" /Y
 copy codelite_launcher.exe "%TARGET_DIR%\CodeLite\" /Y
 copy codelite-echo.exe "%TARGET_DIR%\CodeLite\" /Y
-copy ..\sdk\clang\lib\libclang64.dll "%TARGET_DIR%\CodeLite\libclang.dll" /Y
 copy ..\sdk\clang\lib\clang-format-64.exe "%TARGET_DIR%\CodeLite\codelite-clang-format.exe" /Y
-copy ..\sdk\libssh\lib\libssh64.dll "%TARGET_DIR%\CodeLite\" /Y
+copy ..\sdk\libssh\lib\libssh64.dll "%TARGET_DIR%\CodeLite\libssh.dll" /Y
 copy makedir.exe "%TARGET_DIR%\CodeLite\" /Y
 copy le_exec.exe "%TARGET_DIR%\CodeLite\" /Y
 copy CodeLite.exe "%TARGET_DIR%\CodeLite\" /Y
@@ -66,4 +62,4 @@ copy wx-config.exe "%TARGET_DIR%\CodeLite\" /Y
 
 :END
 
-echo codelite was updated into %TARGET_DIR%\CodeLite
+echo CodeLite was updated into %TARGET_DIR%\CodeLite

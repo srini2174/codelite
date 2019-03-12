@@ -26,59 +26,47 @@
 #ifndef NOTEBOOK_H
 #define NOTEBOOK_H
 
-#include <wx/panel.h>
-#include <wx/simplebook.h>
-#include <vector>
-#include <list>
-#include <wx/settings.h>
-#include <wx/dcmemory.h>
-#include <wx/sharedptr.h>
-#include <wx/bookctrl.h>
-#include "windowstack.h"
-#include <wx/dynarray.h>
-#include <wx/dnd.h>
+#include "cl_defs.h"
+#include <wx/notebook.h>
+
+#include "clTabHistory.h"
 #include "clTabRenderer.h"
+#include "cl_command_event.h"
+#include "windowstack.h"
+#include <list>
+#include <vector>
+#include <wx/bookctrl.h>
+#include <wx/dcmemory.h>
+#include <wx/dnd.h>
+#include <wx/dynarray.h>
+#include <wx/panel.h>
+#include <wx/settings.h>
+#include <wx/sharedptr.h>
+#include "cl_command_event.h"
 
 class Notebook;
 class wxMenu;
 class clTabCtrl;
 
+enum class eDirection {
+    kInvalid = -1,
+    kRight = 0,
+    kLeft = 1,
+    kUp = 2,
+    kDown = 3,
+};
+
 // DnD support of tabs
 class WXDLLIMPEXP_SDK clTabCtrlDropTarget : public wxTextDropTarget
 {
     clTabCtrl* m_tabCtrl;
+    Notebook* m_notebook;
 
 public:
     clTabCtrlDropTarget(clTabCtrl* tabCtrl);
+    clTabCtrlDropTarget(Notebook* notebook);
     virtual ~clTabCtrlDropTarget();
     virtual bool OnDropText(wxCoord x, wxCoord y, const wxString& data);
-};
-
-class WXDLLIMPEXP_SDK clTabHistory
-{
-    wxArrayPtrVoid m_history;
-    wxWindow* m_page; /// The page to add to the hisotry
-
-public:
-    typedef wxSharedPtr<clTabHistory> Ptr_t;
-
-public:
-    clTabHistory();
-    virtual ~clTabHistory();
-
-    void Push(wxWindow* page);
-    void Pop(wxWindow* page);
-    wxWindow* PrevPage();
-    /**
-     * @brief clear the history
-     */
-    void Clear();
-
-    /**
-     * @brief return the tabbing history
-     * @return
-     */
-    const wxArrayPtrVoid& GetHistory() const { return m_history; }
 };
 
 /**
@@ -88,8 +76,9 @@ public:
  */
 class WXDLLIMPEXP_SDK clTabCtrl : public wxPanel
 {
-    int m_height;
-    int m_vTabsWidth;
+    int m_nHeight;
+    int m_nWidth;
+
     clTabInfo::Vec_t m_tabs;
     friend class Notebook;
     friend class clTabCtrlDropTarget;
@@ -103,13 +92,18 @@ class WXDLLIMPEXP_SDK clTabCtrl : public wxPanel
     clTabHistory::Ptr_t m_history;
     clTabRenderer::Ptr_t m_art;
 
+    wxDateTime m_dragStartTime;
+    wxPoint m_dragStartPos;
+    eButtonState m_xButtonState = eButtonState::kNormal;
+
+protected:
     void DoChangeSelection(size_t index);
 
 protected:
+    void OnColoursChanged(clCommandEvent& event);
     void OnPaint(wxPaintEvent& e);
     void OnEraseBG(wxEraseEvent& e);
     void OnSize(wxSizeEvent& event);
-    void OnWindowKeyDown(wxKeyEvent& event);
     void OnLeftDown(wxMouseEvent& event);
     void OnRightUp(wxMouseEvent& event);
     void OnLeftUp(wxMouseEvent& event);
@@ -135,7 +129,7 @@ protected:
      * It also ensures that we draw as much tabs as we can.
      * @param offset reset the 0 based index from m_tabs
      */
-    void UpdateVisibleTabs();
+    void UpdateVisibleTabs(bool forceReshuffle = false);
 
     /**
      * @brief calculate and set the tab ctrl size
@@ -152,6 +146,8 @@ protected:
     void DoDeletePage(size_t page) { RemovePage(page, true, true); }
     void DoShowTabList();
     void DoUpdateXCoordFromPage(wxWindow* page, int diff);
+
+    void OnBeginDrag();
 
 public:
     clTabCtrl(wxWindow* notebook, size_t style);
@@ -180,13 +176,13 @@ public:
      * @param leftSide [output] if the point is on the LEFT side of the tab's rect, then return wxALIGN_LEFT, otherwise
      * return wxALIGN_RIGHT. Another possible value is wxALIGN_INVALID
      */
-    void TestPoint(const wxPoint& pt, int& realPosition, int& tabHit, wxAlignment& align);
+    void TestPoint(const wxPoint& pt, int& realPosition, int& tabHit, eDirection& align);
 
     /**
      * @brief Move the active tab to a new position
      * @param newIndex the new position. 0-based index in the m_tabs array
      */
-    bool MoveActiveToIndex(int newIndex, wxAlignment align = wxALIGN_INVALID);
+    bool MoveActiveToIndex(int newIndex, eDirection direction);
 
     /**
      * @brief return true if index is in the tabs vector range
@@ -249,17 +245,15 @@ class WXDLLIMPEXP_SDK Notebook : public wxPanel
 protected:
     void DoChangeSelection(wxWindow* page);
     bool IsVerticalTabs() const { return m_tabCtrl->IsVerticalTabs(); }
+    void OnSize(wxSizeEvent& event);
+    void PositionControls();
 
 public:
     /**
      * Constructor
      */
-    Notebook(wxWindow* parent,
-             wxWindowID id = wxID_ANY,
-             const wxPoint& pos = wxDefaultPosition,
-             const wxSize& size = wxDefaultSize,
-             long style = 0,
-             const wxString& name = wxEmptyString);
+    Notebook(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition,
+             const wxSize& size = wxDefaultSize, long style = 0, const wxString& name = wxEmptyString);
 
     /**
      * @brief update the notebook art class and refresh
@@ -300,8 +294,8 @@ public:
     /**
      * @brief insert page at a specified position
      */
-    bool InsertPage(
-        size_t index, wxWindow* page, const wxString& label, bool selected = false, const wxBitmap& bmp = wxNullBitmap);
+    bool InsertPage(size_t index, wxWindow* page, const wxString& label, bool selected = false,
+                    const wxBitmap& bmp = wxNullBitmap);
 
     /**
      * @brief return the currently selected page or null
@@ -425,6 +419,11 @@ public:
      * @return
      */
     clTabHistory::Ptr_t GetHistory() const { return m_tabCtrl->GetHistory(); }
+
+    /**
+     * @brief move the active page and place it in the new nexIndex
+     */
+    bool MoveActivePage(int newIndex);
 };
 
 wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_SDK, wxEVT_BOOK_PAGE_CHANGING, wxBookCtrlEvent);
@@ -434,7 +433,6 @@ wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_SDK, wxEVT_BOOK_PAGE_CLOSED, wxBookCtrlEven
 wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_SDK, wxEVT_BOOK_TAB_CONTEXT_MENU, wxBookCtrlEvent);
 wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_SDK, wxEVT_BOOK_PAGE_CLOSE_BUTTON, wxBookCtrlEvent);
 wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_SDK, wxEVT_BOOK_TAB_DCLICKED, wxBookCtrlEvent);
-wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_SDK, wxEVT_BOOK_NAVIGATING, wxBookCtrlEvent);
 wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_SDK, wxEVT_BOOK_TABAREA_DCLICKED, wxBookCtrlEvent);
-
+wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_SDK, wxEVT_BOOK_FILELIST_BUTTON_CLICKED, clContextMenuEvent);
 #endif // NOTEBOOK_H

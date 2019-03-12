@@ -43,10 +43,13 @@ public:
     virtual bool Is(eEntityType type) const;
     virtual wxString Type() const;
     // Save the class into teh database
-    virtual void Store(wxSQLite3Database& db);
+    virtual void Store(PHPLookupTable* lookup);
     virtual void FromResultSet(wxSQLite3ResultSet& res);
     virtual void PrintStdout(int indent) const;
-
+    
+    void FromJSON(const JSONItem& json);
+    JSONItem ToJSON() const;
+    
     /**
      * @brief return an array of inheritance (extends, implementes and traits)
      */

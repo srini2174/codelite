@@ -35,7 +35,8 @@ enum class MESSAGES_VIM {
     UNBALNCED_PARENTESIS_VIM_MSG,
     SAVED_VIM_MSG,
     SAVE_AND_CLOSE_VIM_MSG,
-    CLOSED_VIM_MSG
+    CLOSED_VIM_MSG,
+    SEARCHING_WORD
 };
 
 /*enumeration of implemented commands*/
@@ -45,8 +46,12 @@ enum class COMMANDVI {
     k,
     h,
     l,
+    H,
+    M,
+    L,
     _0,
     _$,
+    _V, /*^*/
     w,
     W,
     b,
@@ -72,6 +77,16 @@ enum class COMMANDVI {
     cw,
     cb,
     ce,
+    c0,
+    cV, /*c^*/
+    c$,
+    caw,
+    ci34, /*ci"*/
+    ci39, /*ci'*/
+    ci40, /*ci(*/
+    ci91, /*ci[*/
+    ci60, /*ci<*/
+    ci123,/*ci{*/
     C,
     cc,
     S,
@@ -82,12 +97,24 @@ enum class COMMANDVI {
     dd,
     db,
     de,
+    d0,
+    d$,
+    dV, /*d^*/
+    daw,
+    di34, /*di"*/
+    di39, /*di'*/
+    di40, /*di(*/
+    di91, /*di[*/
+    di60, /*di<*/
+    di123,/*di{*/
     D,
     diesis,
+    diesis_N,
     N,
     n,
     slesh,
     repeat,
+    ctrl_R,
     ctrl_U,
     ctrl_D, /*One has to 'disattivate' the default behavior of Ctrl+D/U*/
     p,
@@ -97,8 +124,19 @@ enum class COMMANDVI {
     yw,
     yb,
     ye,
+    y0,
+    yV, /*y^*/
+    y$,
+    yaw,
+    yi34, /*yi"*/
+    yi39, /*yi'*/
+    yi40, /*yi(*/
+    yi91, /*yi[*/
+    yi60, /*yi<*/
+    yi123,/*yi{*/
     J,
-    v
+    v,
+    V
 };
 
 /**
@@ -156,6 +194,7 @@ private:
     int m_repeat;           /*!< number of repetition for the command */
     wxChar m_baseCommand;   /*!< base command (first char of the cmd)*/
     wxChar m_actionCommand; /*!< eventual command modifier.In 'c3w', "w" */
+    wxChar m_externalCommand;
     int m_actions;          /*!< repetition of the modifier.In 'c3x', "3" */
 
     /*~~~~~~~~ HELPER ~~~~~~~~~*/
@@ -183,7 +222,7 @@ public:
     };
 
 public:
-    VimCommand();
+    VimCommand(IManager* m_mgr);
     ~VimCommand();
 
     /*~~~~~~~ EVENT HANLDER ~~~~~~~~~~~~~~~~*/
@@ -214,6 +253,7 @@ public:
     void set_current_modus(VIM_MODI modus);
     void reset_repeat_last();
     void ResetCommand();
+    wxString getSearchedWord();
     void set_ctrl(wxStyledTextCtrl* ctrl);
 
 private:
@@ -227,9 +267,10 @@ private:
     bool is_space_preceding(bool onlyWordChar = true, bool cross_line = false);
     wxString add_following_spaces();
     wxString add_preceding_spaces();
-    bool search_word(SEARCH_DIRECTION flag);
-    bool search_word(SEARCH_DIRECTION flag, long pos);
+    bool search_word(SEARCH_DIRECTION direction, int flag = 0);
+    bool search_word(SEARCH_DIRECTION direction, int flag, long pos);
     long goToMatchingParentesis(long start_pos);
+    bool findMatchingParentesis(wxChar lch, wxChar rch, long minPos, long maxPos, long& leftPos, long& rightPos);
     void normal_modus(wxChar ch);
     void visual_modus(wxChar ch);
     void command_modus(wxChar ch);
@@ -246,6 +287,7 @@ private:
     int m_repeat;           /*!< number of repetition for the command */
     wxChar m_baseCommand;   /*!< base command (first char of the cmd)*/
     wxChar m_actionCommand; /*!< eventual command modifier.In 'c3w', "w" */
+    wxChar m_externalCommand;
     int m_actions;          /*!< repetition of the modifier.In 'c3x', "3" */
 
     int m_cumulativeUndo; /*!< cumulative actions performed in the editor*/
@@ -260,6 +302,7 @@ private:
 
     /*~~~~~~~ EDITOR ~~~~~~~~~*/
     wxStyledTextCtrl* m_ctrl;
+    IManager* m_mgr;
     friend VimBaseCommand;
 };
 

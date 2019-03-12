@@ -38,8 +38,11 @@
 #include "smart_ptr.h"
 #include <set>
 #include "commentconfigdata.h"
+#include "wxStringHash.h"
+#include "JSON.h"
 
 // The entity type
+class WXDLLIMPEXP_CL PHPLookupTable;
 enum eEntityType {
     kEntityTypeVariable = 0,
     kEntityTypeFunction = 1,
@@ -84,8 +87,8 @@ class WXDLLIMPEXP_CL PHPEntityBase
 {
 public:
     typedef SmartPtr<PHPEntityBase> Ptr_t;
-    typedef std::list<PHPEntityBase::Ptr_t> List_t;
-    typedef std::map<wxString, PHPEntityBase::Ptr_t> Map_t;
+    typedef std::vector<PHPEntityBase::Ptr_t> List_t;
+    typedef std::unordered_map<wxString, PHPEntityBase::Ptr_t> Map_t;
 
 protected:
     PHPEntityBase::Map_t m_childrenMap;
@@ -101,7 +104,11 @@ protected:
 
     // The database identifier
     wxLongLong m_dbId;
-
+    
+protected:
+    JSONItem BaseToJSON(const wxString& entityType) const;
+    void BaseFromJSON(const JSONItem& json);
+    
 public:
     PHPEntityBase();
     virtual ~PHPEntityBase(){};
@@ -123,7 +130,16 @@ public:
      * @brief generate a php doc comment that matches this entry
      */
     virtual wxString FormatPhpDoc(const CommentConfigData& data) const = 0;
-
+    
+    /**
+     * @brief serialization to JSON
+     */
+    virtual JSONItem ToJSON() const = 0;
+    /**
+     * @brief serialization from JSON
+     */
+    virtual void FromJSON(const JSONItem& json) = 0;
+    
     // Setters / Getters
     void SetFlag(size_t flag, bool b = true) { b ? this->m_flags |= flag : this->m_flags &= ~flag; }
     bool HasFlag(size_t flag) const { return m_flags & flag; }
@@ -158,12 +174,12 @@ public:
      * @brief print this object to the stdout
      */
     virtual void PrintStdout(int indent) const = 0;
-    
+
     /**
      * @brief convert this object into a string tooltip
      */
     virtual wxString ToTooltip() const { return wxEmptyString; }
-    
+
     /**
      * @brief return a nicely formatted string to display for this
      * entity, mainly used for UI purposes
@@ -189,12 +205,12 @@ public:
      * @brief add a child to this scope
      */
     void AddChild(PHPEntityBase::Ptr_t child);
-    
+
     /**
      * @brief remove a child
      */
     void RemoveChild(PHPEntityBase::Ptr_t child);
-    
+
     /**
      * @brief convert this base class to its concrete
      * @return
@@ -205,7 +221,7 @@ public:
      * @brief store this object and all its children into the database
      * @param db
      */
-    virtual void Store(wxSQLite3Database& db) = 0;
+    virtual void Store(PHPLookupTable* lookup) = 0;
 
     /**
      * @brief construct this instance from a sqlite3 result set
@@ -215,6 +231,6 @@ public:
     /**
      * @brief store this entry and all its children
      */
-    void StoreRecursive(wxSQLite3Database& db);
+    void StoreRecursive(PHPLookupTable* lookup);
 };
 #endif // PHPENTITYIMPL_H

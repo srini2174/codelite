@@ -31,7 +31,6 @@
 #include <wx/statline.h>
 #include <wx/treectrl.h>
 #include "wx/timer.h"
-#include "clTreeKeyboardInput.h"
 
 class CppSymbolTree;
 
@@ -45,14 +44,14 @@ class QuickOutlineDlg : public wxDialog
 protected:
     wxStaticLine* m_staticline1;
     CppSymbolTree* m_treeOutline;
-    clTreeKeyboardInput::Ptr_t m_keyboard;
 
 protected:
     void OnCharHook(wxKeyEvent& e);
     void OnTextEntered(wxCommandEvent& e);
     void OnItemSelected(wxCommandEvent& e);
     void OnKeyDown(wxKeyEvent& e);
-
+    void DoParseActiveBuffer();
+    
 public:
     QuickOutlineDlg(wxWindow* parent,
                     const wxString& fileName,

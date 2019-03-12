@@ -40,12 +40,13 @@ enum DebuggerCommands {
     DBG_PAUSE = 0,
     DBG_NEXT,
     DBG_STEPIN,
+    DBG_STEPI,
     DBG_STEPOUT,
     DBG_SHOW_CURSOR,
     DBG_NEXTI,
 };
 
-// Breakpoint types. If you add more, LEditor::FillBPtoMarkerArray will also need altering
+// Breakpoint types. If you add more, clEditor::FillBPtoMarkerArray will also need altering
 enum BreakpointType {
     /*Convenient return-codes*/
     BP_type_invalid = -1,
@@ -746,6 +747,11 @@ public:
      * \return true on success, false otherwise
      */
     virtual bool StepIn() = 0;
+    /**
+     * \brief step into method
+     * \return true on success, false otherwise
+     */
+    virtual bool StepInInstruction() = 0;
     /**
      * \brief step out the current method (gdb's 'finish' command)
      * \return true on success, false otherwise

@@ -26,13 +26,14 @@
 #ifndef __PHP__
 #define __PHP__
 
-#include "plugin.h"
-#include <wx/filename.h>
-#include <cl_command_event.h>
-#include "plugin_settings.h"
-#include "php_event.h"
-#include <wx/sharedptr.h>
 #include "XDebugManager.h"
+#include "php_event.h"
+#include "plugin.h"
+#include "plugin_settings.h"
+#include <cl_command_event.h>
+#include <wx/filename.h>
+#include <wx/sharedptr.h>
+#include "PhpSFTPHandler.h"
 
 class EvalPane;
 class LocalsView;
@@ -54,7 +55,9 @@ protected:
     LocalsView* m_xdebugLocalsView;
     EvalPane* m_xdebugEvalPane;
     bool m_showWelcomePage;
-    bool m_toggleToolbar;
+#if USE_SFTP
+    PhpSFTPHandler::Ptr_t m_sftpHandler;
+#endif //USE_SFTP
 
 public:
     enum {
@@ -72,31 +75,25 @@ public:
     void EnsureAuiPaneIsVisible(const wxString& paneName, bool update = false);
     void FinalizeStartup();
 
-    PHPDebugPane* GetDebuggerPane() {
-        return m_debuggerPane;
-    }
+    PHPDebugPane* GetDebuggerPane() { return m_debuggerPane; }
 
 protected:
     bool IsWorkspaceViewDetached();
     void DoOpenWorkspace(const wxString& filename, bool createIfMissing = false, bool createProjectFromSources = false);
     void DoPlaceMenuBar(wxMenuBar* menuBar);
     void DoEnsureXDebugPanesVisible(const wxString& selectWindow = "");
-    void DoSyncFileWithRemote(const wxFileName& localFile);
 
 public:
     //--------------------------------------------
     // Abstract methods
     //--------------------------------------------
-    virtual clToolBar* CreateToolBar(wxWindow* parent);
+    virtual void CreateToolBar(clToolBar* toolbar);
     virtual void CreatePluginMenu(wxMenu* pluginsMenu);
     virtual void HookPopupMenu(wxMenu* menu, MenuType type);
-    virtual void UnHookPopupMenu(wxMenu* menu, MenuType type);
     virtual void UnPlug();
     void RunXDebugDiagnostics();
 
-    IManager* GetManager() {
-        return m_mgr;
-    }
+    IManager* GetManager() { return m_mgr; }
     // Event handlers
 
     void SetEditorActive(IEditor* editor);
@@ -120,7 +117,6 @@ public:
     void OnGetActiveProjectFiles(wxCommandEvent& e);
     void OnNewProject(clNewProjectEvent& e);
     void OnNewProjectFinish(clNewProjectEvent& e);
-    void OnFindInFilesDismissed(clCommandEvent& e);
     void OnRunXDebugDiagnostics(wxCommandEvent& e);
     void OnMenuCommand(wxCommandEvent& e);
     void OnXDebugShowBreakpointsWindow(wxCommandEvent& e);
@@ -133,8 +129,6 @@ public:
     void OnDebugEnded(XDebugEvent& e);
     void OnFileSysetmUpdated(clFileSystemEvent& event);
     void OnSaveSession(clCommandEvent& event);
-    void OnReplaceInFiles(clFileSystemEvent& e);
-    void OnFileAction(clCommandEvent& e);
 };
 
 #endif // PHP

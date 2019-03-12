@@ -35,6 +35,7 @@
 #include <wx/event.h>
 #include "cl_command_event.h"
 #include <wx/font.h>
+#include "wxStringHash.h"
 
 // When the version is 0, it means that we need to upgrade the colours for the line numbers
 // and for the default state
@@ -47,14 +48,12 @@ wxDECLARE_EXPORTED_EVENT(WXDLLIMPEXP_SDK, wxEVT_UPGRADE_LEXERS_PROGRESS, clComma
 class WXDLLIMPEXP_SDK ColoursAndFontsManager : public wxEvtHandler
 {
     typedef std::vector<LexerConf::Ptr_t> Vec_t;
-    typedef std::map<wxString, ColoursAndFontsManager::Vec_t> Map_t;
+    typedef std::unordered_map<wxString, ColoursAndFontsManager::Vec_t> Map_t;
 
 protected:
     bool m_initialized;
     ColoursAndFontsManager::Map_t m_lexersMap;
     ColoursAndFontsManager::Vec_t m_allLexers;
-    wxColour m_globalBgColour;
-    wxColour m_globalFgColour;
     wxString m_globalTheme;
     LexerConf::Ptr_t m_defaultLexer;
     int m_lexersVersion;
@@ -66,13 +65,31 @@ private:
 
     void LoadOldXmls(const std::vector<wxXmlDocument*>& xmlFiles, bool userLexers = false);
     LexerConf::Ptr_t DoAddLexer(wxXmlNode* node);
-    LexerConf::Ptr_t DoAddLexer(JSONElement json);
+    LexerConf::Ptr_t DoAddLexer(JSONItem json);
     void Clear();
     wxFileName GetConfigFile() const;
     void LoadJSON(const wxFileName& path);
 
+protected:
+    void OnAdjustTheme(clCommandEvent& event);
+
 public:
     static ColoursAndFontsManager& Get();
+    
+    /**
+     * @brief return a suitable background colour that matches the lexer's bg colour
+     */
+    wxColour GetBackgroundColourFromLexer(LexerConf::Ptr_t lexer) const;
+
+    /**
+     * @brief Export themes to JSON file
+     */
+    bool ExportThemesToFile(const wxFileName& outputFile, const wxArrayString& names = wxArrayString()) const;
+
+    /**
+     * @brief import lexers from configuration file
+     */
+    bool ImportLexersFile(const wxFileName& inputFile, bool prompt = true);
 
     /**
      * @brief save the global settings
@@ -83,9 +100,6 @@ public:
      */
     void UpdateLexerColours(LexerConf::Ptr_t lexer, bool force);
 
-    const wxColour& GetGlobalBgColour() const { return m_globalBgColour; }
-    const wxColour& GetGlobalFgColour() const { return m_globalFgColour; }
-
     /**
      * @brief create new theme for a lexer by copying an existing theme 'sourceTheme'
      * @param lexerName the lexer name
@@ -94,20 +108,9 @@ public:
      */
     LexerConf::Ptr_t CopyTheme(const wxString& lexerName, const wxString& themeName, const wxString& sourceTheme);
 
-    void SetGlobalBgColour(const wxColour& globalBgColour)
-    {
-        this->m_globalBgColour = globalBgColour;
-        SaveGlobalSettings();
-    }
-
     void SetGlobalFont(const wxFont& font);
     const wxFont& GetGlobalFont() const;
 
-    void SetGlobalFgColour(const wxColour& globalFgColour)
-    {
-        this->m_globalFgColour = globalFgColour;
-        SaveGlobalSettings();
-    }
     void SetGlobalTheme(const wxString& globalTheme) { this->m_globalTheme = globalTheme; }
     const wxString& GetGlobalTheme() const { return m_globalTheme; }
     /**
@@ -123,7 +126,7 @@ public:
     /**
      * @brief save the lexers into their proper file name
      */
-    void Save();
+    void Save(bool forExport = false);
 
     /**
      * @brief set the active theme for a lexer by name
@@ -145,6 +148,11 @@ public:
      * @brief return an array of available lexers
      */
     wxArrayString GetAllLexersNames() const;
+
+    /**
+     * @brief return list of all themes
+     */
+    wxArrayString GetAllThemes() const;
 
     /**
      * @brief return lexer for a file

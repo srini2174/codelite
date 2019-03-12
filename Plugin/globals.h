@@ -25,21 +25,23 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#include <wx/ctrlsub.h>
-#include <wx/string.h>
-#include <wx/colour.h>
-#include <wx/arrstr.h>
 #include "codelite_exports.h"
+#include "macros.h"
 #include "window_locker.h"
 #include "workspace.h"
-#include <wx/variant.h>
+#include <wx/arrstr.h>
 #include <wx/bitmap.h>
 #include <wx/brush.h>
-#include <wx/dcgraph.h>
+#include <wx/colour.h>
+#include <wx/ctrlsub.h>
 #include <wx/dc.h>
-#include "macros.h"
+#include <wx/dcgraph.h>
 #include <wx/propgrid/propgrid.h>
+#include <wx/string.h>
+#include <wx/variant.h>
+#include <wx/infobar.h>
 
+class wxDataViewCtrl;
 class IManager;
 class wxStyledTextCtrl;
 class IProcess;
@@ -366,8 +368,8 @@ public:
  * @param maxsize the maximum number of items allowed in the arraystring. 0 means no maximum
  * @return the amended entries
  */
-WXDLLIMPEXP_SDK wxArrayString
-    ReturnWithStringPrepended(const wxArrayString& oldarray, const wxString& str, const size_t maxsize);
+WXDLLIMPEXP_SDK wxArrayString ReturnWithStringPrepended(const wxArrayString& oldarray, const wxString& str,
+                                                        const size_t maxsize);
 
 /**
  * @brief return true if filename is a symbolic link
@@ -404,6 +406,16 @@ WXDLLIMPEXP_SDK wxString DbgPrependCharPtrCastIfNeeded(const wxString& expr, con
 WXDLLIMPEXP_SDK wxVariant MakeIconText(const wxString& text, const wxBitmap& bmp);
 
 /**
+ * @brief create wxVariant from wxString + int
+ */
+WXDLLIMPEXP_SDK wxVariant MakeBitmapIndexText(const wxString& text, int imgIndex);
+
+/**
+ * @brief create wxVariant from label+checkbox+imgindex
+ */
+WXDLLIMPEXP_SDK wxVariant MakeCheckboxVariant(const wxString& label, bool checked, int imgIndex);
+
+/**
  * @brief queue a call to a function to be executed on the next event loop
  */
 WXDLLIMPEXP_SDK void PostCall(wxObject* instance, clEventFunc_t func, wxClientData* arg);
@@ -414,17 +426,6 @@ WXDLLIMPEXP_SDK void PostCall(wxObject* instance, clEventFunc_t func);
  * @param trim trim the lines with set to true
  */
 WXDLLIMPEXP_SDK wxArrayString SplitString(const wxString& inString, bool trim = true);
-
-/**
- * @brief make an execution command for running cmd under a shell and optionally prompt the user with the 'press any to
- * key to continue...' message
- */
-WXDLLIMPEXP_SDK wxString MakeExecInShellCommand(const wxString& cmd, const wxString& wd, bool waitForAnyKey);
-
-/**
- * @brief launch codelite terminal and return its TTY
- */
-WXDLLIMPEXP_SDK IProcess* LaunchTerminal(const wxString& title, bool forDebugger, IProcessCallback* processCB);
 
 /**
  * @brief launch terminal for debugging purposes and return its TTY. This function does nothing under Windows
@@ -462,12 +463,10 @@ WXDLLIMPEXP_SDK wxStandardID PromptForYesNoCancelDialogWithCheckbox(
  * @param checkboxInitialValue
  * @return wxRichMessageDialog::ShowModal() return value
  */
-WXDLLIMPEXP_SDK wxStandardID
-    PromptForYesNoDialogWithCheckbox(const wxString& message, const wxString& dlgId,
-                                     const wxString& yesLabel = _("Yes"), const wxString& noLabel = _("No"),
-                                     const wxString& checkboxLabel = _("Remember my answer and don't ask me again"),
-                                     long style = wxYES_NO | wxICON_QUESTION | wxYES_DEFAULT,
-                                     bool checkboxInitialValue = false);
+WXDLLIMPEXP_SDK wxStandardID PromptForYesNoDialogWithCheckbox(
+    const wxString& message, const wxString& dlgId, const wxString& yesLabel = _("Yes"),
+    const wxString& noLabel = _("No"), const wxString& checkboxLabel = _("Remember my answer and don't ask me again"),
+    long style = wxYES_NO | wxICON_QUESTION | wxYES_DEFAULT, bool checkboxInitialValue = false);
 
 /**
  * @brief wrap string with quotes if needed
@@ -584,4 +583,47 @@ WXDLLIMPEXP_SDK bool clFindExecutable(const wxString& name, wxFileName& exepath,
  */
 WXDLLIMPEXP_SDK int clFindMenuItemPosition(wxMenu* menu, int menuItemId);
 
+/**
+ * @brief an efficient way to tokenize string into words (separated by SPACE and/or TAB)
+ * @code
+ * wxString str = "My String That Requires Tokenize";
+ * wxString word; // The output
+ * size_t offset = 0;
+ * while(clNextWord(str, offset, word)) {
+ *      // Do something with "word" here
+ * }
+ * @codeend
+ * @param str the string to tokenize
+ * @param offset used internally, allocate one on the stack and initialise it to 0
+ * @param word [output]
+ * @return true if a word was found
+ */
+WXDLLIMPEXP_SDK bool clNextWord(const wxString& str, size_t& offset, wxString& word);
+
+/**
+ * @brief join strings with "\n" or "\r\n" (depends on eol)
+ * eol can be wxSTC_EOL_CRLF, wxSTC_EOL_LF etc
+ */
+WXDLLIMPEXP_SDK wxString clJoinLinesWithEOL(const wxArrayString& lines, int eol);
+
+/**
+ * @brief fit the dataview columns width to match their content
+ */
+WXDLLIMPEXP_SDK void clFitColumnWidth(wxDataViewCtrl* ctrl);
+
+/**
+ * @brief return the screen size, taking dual or more screens into account
+ */
+WXDLLIMPEXP_SDK wxSize clGetDisplaySize();
+
+/**
+ * @brief returna top level window best size using its parent's size as reference
+ */
+WXDLLIMPEXP_SDK void clSetTLWindowBestSizeAndPosition(wxWindow* win);
+
+/**
+ * @brief set dialog best size and position
+ * @param win
+ */
+WXDLLIMPEXP_SDK void clSetDialogBestSizeAndPosition(wxDialog* win);
 #endif // GLOBALS_H

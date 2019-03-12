@@ -10,7 +10,7 @@
 #include <map>
 #include "php_project.h"
 #include "php_workspace.h"
-#include "json_node.h"
+#include "JSON.h"
 #include "file_logger.h"
 #include "fileutils.h"
 #include "PHPSourceFile.h"
@@ -168,8 +168,8 @@ wxString MapRemoteFileToLocalFile(const wxString& remoteFile)
 
     // Use the active project file mapping
     const PHPProjectSettingsData& settings = pProject->GetSettings();
-    const JSONElement::wxStringMap_t& mapping = settings.GetFileMapping();
-    JSONElement::wxStringMap_t::const_iterator iter = mapping.begin();
+    const wxStringMap_t& mapping = settings.GetFileMapping();
+    wxStringMap_t::const_iterator iter = mapping.begin();
     for(; iter != mapping.end(); ++iter) {
         const wxString& localFolder = iter->first;
         const wxString& remoteFolder = iter->second;

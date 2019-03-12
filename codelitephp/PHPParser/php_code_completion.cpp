@@ -1,42 +1,43 @@
-#include "php_code_completion.h"
-#include "php_utils.h"
-#include <wx/stc/stc.h>
-#include <plugin.h>
-#include <algorithm>
-#include "php_strings.h"
-#include "php_workspace.h"
-#include <imanager.h>
-#include <entry.h>
-#include <event_notifier.h>
-#include "cl_command_event.h"
-#include "php_helpers.h"
-#include <wx/log.h>
-#include <macros.h>
-#include "PHPEntityBase.h"
-#include "PHPEntityVariable.h"
-#include "PHPEntityFunction.h"
-#include "PHPExpression.h"
-#include "php_parser_thread.h"
-#include "macros.h"
-#include "PHPEntityClass.h"
-#include "jobqueue.h"
-#include <wx/log.h>
-#include "PHPSymbolsCacher.h"
 #include "ColoursAndFontsManager.h"
-#include "PHPEntityKeyword.h"
-#include "wxCodeCompletionBoxManager.h"
-#include "globals.h"
-#include "clSelectSymbolDialog.h"
+#include "PHPEntityBase.h"
+#include "PHPEntityClass.h"
+#include "PHPEntityFunction.h"
 #include "PHPEntityFunctionAlias.h"
-#include "tags_options_data.h"
+#include "PHPEntityKeyword.h"
+#include "PHPEntityVariable.h"
+#include "PHPExpression.h"
+#include "PHPSymbolsCacher.h"
+#include "clEditorBar.h"
+#include "clSelectSymbolDialog.h"
+#include "cl_command_event.h"
 #include "cl_config.h"
 #include "editor_config.h"
+#include "globals.h"
+#include "jobqueue.h"
+#include "macros.h"
+#include "php_code_completion.h"
+#include "php_helpers.h"
+#include "php_parser_thread.h"
+#include "php_strings.h"
+#include "php_utils.h"
+#include "php_workspace.h"
+#include "tags_options_data.h"
+#include "wxCodeCompletionBoxManager.h"
+#include <algorithm>
+#include <entry.h>
+#include <event_notifier.h>
+#include <imanager.h>
+#include <macros.h>
+#include <plugin.h>
+#include <wx/log.h>
+#include <wx/stc/stc.h>
 
 ///////////////////////////////////////////////////////////////////
 
 struct PHPCCUserData : public wxClientData {
     PHPEntityBase::Ptr_t entry;
-    PHPCCUserData(PHPEntityBase::Ptr_t e) : entry(e)
+    PHPCCUserData(PHPEntityBase::Ptr_t e)
+        : entry(e)
     {
     }
 };
@@ -59,7 +60,9 @@ struct _SAscendingSort {
 
 PHPCodeCompletion* PHPCodeCompletion::m_instance = NULL;
 
-PHPCodeCompletion::PHPCodeCompletion() : m_manager(NULL), m_typeInfoTooltip(NULL)
+PHPCodeCompletion::PHPCodeCompletion()
+    : m_manager(NULL)
+    , m_typeInfoTooltip(NULL)
 {
     EventNotifier::Get()->Connect(wxEVT_CMD_RETAG_WORKSPACE, wxCommandEventHandler(PHPCodeCompletion::OnRetagWorkspace),
                                   NULL, this);
@@ -85,10 +88,16 @@ PHPCodeCompletion::PHPCodeCompletion() : m_manager(NULL), m_typeInfoTooltip(NULL
                                   NULL, this);
     EventNotifier::Get()->Connect(wxEVT_CC_JUMP_HYPER_LINK,
                                   clCodeCompletionEventHandler(PHPCodeCompletion::OnQuickJump), NULL, this);
+    EventNotifier::Get()->Bind(wxPHP_PARSE_ENDED, &PHPCodeCompletion::OnParseEnded, this);
+    EventNotifier::Get()->Bind(wxEVT_CC_UPDATE_NAVBAR, &PHPCodeCompletion::OnUpdateNavigationBar, this);
+    EventNotifier::Get()->Bind(wxEVT_NAVBAR_SCOPE_MENU_SHOWING, &PHPCodeCompletion::OnNavigationBarMenuShowing, this);
+    EventNotifier::Get()->Bind(wxEVT_NAVBAR_SCOPE_MENU_SELECTION_MADE,
+                               &PHPCodeCompletion::OnNavigationBarMenuSelectionMade, this);
 }
 
 PHPCodeCompletion::~PHPCodeCompletion()
 {
+    EventNotifier::Get()->Unbind(wxEVT_CC_UPDATE_NAVBAR, &PHPCodeCompletion::OnUpdateNavigationBar, this);
     EventNotifier::Get()->Disconnect(wxEVT_CMD_RETAG_WORKSPACE,
                                      wxCommandEventHandler(PHPCodeCompletion::OnRetagWorkspace), NULL, this);
     EventNotifier::Get()->Disconnect(wxEVT_CMD_RETAG_WORKSPACE_FULL,
@@ -114,21 +123,21 @@ PHPCodeCompletion::~PHPCodeCompletion()
                                      clCodeCompletionEventHandler(PHPCodeCompletion::OnInsertDoxyBlock), NULL, this);
     EventNotifier::Get()->Disconnect(wxEVT_CC_JUMP_HYPER_LINK,
                                      clCodeCompletionEventHandler(PHPCodeCompletion::OnQuickJump), NULL, this);
+    EventNotifier::Get()->Unbind(wxPHP_PARSE_ENDED, &PHPCodeCompletion::OnParseEnded, this);
+    EventNotifier::Get()->Unbind(wxEVT_NAVBAR_SCOPE_MENU_SHOWING, &PHPCodeCompletion::OnNavigationBarMenuShowing, this);
+    EventNotifier::Get()->Unbind(wxEVT_NAVBAR_SCOPE_MENU_SELECTION_MADE,
+                                 &PHPCodeCompletion::OnNavigationBarMenuSelectionMade, this);
 }
 
 PHPCodeCompletion* PHPCodeCompletion::Instance()
 {
-    if(!m_instance) {
-        m_instance = new PHPCodeCompletion();
-    }
+    if(!m_instance) { m_instance = new PHPCodeCompletion(); }
     return m_instance;
 }
 
 void PHPCodeCompletion::Release()
 {
-    if(m_instance) {
-        delete m_instance;
-    }
+    if(m_instance) { delete m_instance; }
     m_instance = NULL;
 }
 
@@ -149,7 +158,7 @@ void PHPCodeCompletion::DoShowCompletionBox(const PHPEntityBase::List_t& entries
             continue;
         }
 
-        PHPEntityBase::Ptr_t ns = expr->GetSourceFile()->Namespace();  // the namespace at the source file
+        PHPEntityBase::Ptr_t ns = expr->GetSourceFile()->Namespace(); // the namespace at the source file
         TagEntryPtr t = DoPHPEntityToTagEntry(entry);
 
         tags.push_back(t);
@@ -165,10 +174,7 @@ void PHPCodeCompletion::DoShowCompletionBox(const PHPEntityBase::List_t& entries
                                                         wxCodeCompletionBox::kRefreshOnKeyType, wxNOT_FOUND);
 }
 
-void PHPCodeCompletion::OnCodeCompletionBoxDismissed(clCodeCompletionEvent& e)
-{
-    e.Skip();
-}
+void PHPCodeCompletion::OnCodeCompletionBoxDismissed(clCodeCompletionEvent& e) { e.Skip(); }
 
 TagEntryPtr PHPCodeCompletion::DoPHPEntityToTagEntry(PHPEntityBase::Ptr_t entry)
 {
@@ -191,8 +197,8 @@ TagEntryPtr PHPCodeCompletion::DoPHPEntityToTagEntry(PHPEntityBase::Ptr_t entry)
     wxString comment, docComment;
     docComment = entry->GetDocComment();
     if(docComment.IsEmpty() == false) {
-        docComment.Trim().Trim(false);           // The Doc comment
-        comment << docComment << wxT("\n<hr>");  // HLine
+        docComment.Trim().Trim(false);          // The Doc comment
+        comment << docComment << wxT("\n<hr>"); // HLine
     }
 
     wxFileName fn(entry->GetFilename());
@@ -317,8 +323,7 @@ void PHPCodeCompletion::OnFunctionCallTip(clCodeCompletionEvent& e)
 {
     e.Skip();
     if(PHPWorkspace::Get()->IsOpen()) {
-        if(!CanCodeComplete(e))
-            return;
+        if(!CanCodeComplete(e)) return;
 
         IEditor* editor = dynamic_cast<IEditor*>(e.GetEditor());
         if(editor) {
@@ -345,27 +350,20 @@ void PHPCodeCompletion::OnFunctionCallTip(clCodeCompletionEvent& e)
 struct PHPFindSymbol_ClientData : public wxClientData {
     PHPEntityBase::Ptr_t m_ptr;
 
-    PHPFindSymbol_ClientData(PHPEntityBase::Ptr_t ptr)
-    {
-        m_ptr = ptr;
-    }
-    virtual ~PHPFindSymbol_ClientData()
-    {
-    }
+    PHPFindSymbol_ClientData(PHPEntityBase::Ptr_t ptr) { m_ptr = ptr; }
+    virtual ~PHPFindSymbol_ClientData() {}
 };
 
 void PHPCodeCompletion::OnFindSymbol(clCodeCompletionEvent& e)
 {
     e.Skip();
     if(PHPWorkspace::Get()->IsOpen()) {
-        if(!CanCodeComplete(e))
-            return;
+        if(!CanCodeComplete(e)) return;
         e.Skip(false);
         IEditor* editor = dynamic_cast<IEditor*>(e.GetEditor());
         if(editor) {
             wxString word = editor->GetWordAtCaret();
-            if(word.IsEmpty())
-                return;
+            if(word.IsEmpty()) return;
             PHPEntityBase::List_t symbols = m_lookupTable.FindSymbol(word);
             if(symbols.size() == 1) {
                 PHPEntityBase::Ptr_t match = *symbols.begin();
@@ -388,12 +386,9 @@ void PHPCodeCompletion::OnFindSymbol(clCodeCompletionEvent& e)
 
                 // Show selection dialog
                 clSelectSymbolDialog dlg(EventNotifier::Get()->TopFrame(), entries);
-                if(dlg.ShowModal() != wxID_OK)
-                    return;
+                if(dlg.ShowModal() != wxID_OK) return;
                 PHPFindSymbol_ClientData* cd = dynamic_cast<PHPFindSymbol_ClientData*>(dlg.GetSelection());
-                if(cd) {
-                    DoOpenEditorForEntry(cd->m_ptr);
-                }
+                if(cd) { DoOpenEditorForEntry(cd->m_ptr); }
             }
         }
     }
@@ -402,16 +397,13 @@ void PHPCodeCompletion::OnFindSymbol(clCodeCompletionEvent& e)
 void PHPCodeCompletion::OnTypeinfoTip(clCodeCompletionEvent& e)
 {
     if(PHPWorkspace::Get()->IsOpen()) {
-        if(!CanCodeComplete(e))
-            return;
+        if(!CanCodeComplete(e)) return;
 
         IEditor* editor = dynamic_cast<IEditor*>(e.GetEditor());
         if(editor) {
             if(IsPHPFile(editor)) {
                 PHPEntityBase::Ptr_t entity = GetPHPEntityAtPos(editor, e.GetPosition());
-                if(entity) {
-                    e.SetTooltip(entity->ToTooltip());
-                }
+                if(entity) { e.SetTooltip(entity->ToTooltip()); }
                 return;
             }
         }
@@ -424,7 +416,7 @@ void PHPCodeCompletion::OnTypeinfoTip(clCodeCompletionEvent& e)
 PHPLocation::Ptr_t PHPCodeCompletion::FindDefinition(IEditor* editor, int pos)
 {
     CHECK_PHP_WORKSPACE_RET_NULL();
-    PHPLocation::Ptr_t loc;  // Null
+    PHPLocation::Ptr_t loc; // Null
     if(IsPHPFile(editor)) {
         PHPEntityBase::Ptr_t resolved = GetPHPEntityAtPos(editor, editor->GetCurrentPosition());
         if(resolved) {
@@ -457,27 +449,22 @@ PHPEntityBase::Ptr_t PHPCodeCompletion::GetPHPEntityAtPos(IEditor* editor, int p
 bool PHPCodeCompletion::CanCodeComplete(clCodeCompletionEvent& e)
 {
     int pos = e.GetPosition();
-    if(pos)
-        pos -= 1;
+    if(pos) pos -= 1;
     IEditor* editor = dynamic_cast<IEditor*>(e.GetEditor());
-    if(!editor)
-        return false;
+    if(!editor) return false;
 
     // we can get style 0 if we added chars and they were not styled just yet
     // sd we use the first style near our position (backward)
     int lineNumber = editor->LineFromPos(pos);
     int lineStartPos = editor->PosFromLine(lineNumber);
 
-    if(lineStartPos > pos)
-        return false;
+    if(lineStartPos > pos) return false;
 
     int styleAt(0);
     int retryLeft(pos - lineStartPos + 2);
     while((styleAt == 0) && retryLeft && pos > 0) {
         styleAt = editor->GetStyleAtPos(pos);
-        if(styleAt == 0) {
-            --pos;
-        }
+        if(styleAt == 0) { --pos; }
         --retryLeft;
     }
 
@@ -518,8 +505,7 @@ void PHPCodeCompletion::OnRetagWorkspace(wxCommandEvent& event)
 
 PHPEntityBase::Ptr_t PHPCodeCompletion::DoGetPHPEntryUnderTheAtPos(IEditor* editor, int pos, bool forFunctionCalltip)
 {
-    if(!PHPWorkspace::Get()->IsOpen())
-        return PHPEntityBase::Ptr_t(NULL);
+    if(!PHPWorkspace::Get()->IsOpen()) return PHPEntityBase::Ptr_t(NULL);
     pos = editor->GetCtrl()->WordEndPosition(pos, true);
 
     // Get the expression under the caret
@@ -528,7 +514,7 @@ PHPEntityBase::Ptr_t PHPCodeCompletion::DoGetPHPEntryUnderTheAtPos(IEditor* edit
     PHPEntityBase::Ptr_t resolved;
 
     // Parse the source file
-    PHPSourceFile source(unsavedBuffer);
+    PHPSourceFile source(unsavedBuffer, &m_lookupTable);
     source.SetFilename(editor->GetFileName());
     source.SetParseFunctionBody(false);
     source.Parse();
@@ -542,9 +528,7 @@ PHPEntityBase::Ptr_t PHPCodeCompletion::DoGetPHPEntryUnderTheAtPos(IEditor* edit
         int wordStart = editor->GetCtrl()->WordStartPosition(pos, true);
         wxString theWord = editor->GetTextRange(wordStart, pos);
         wxString theWordNoDollar = theWord;
-        if(theWord.StartsWith("$")) {
-            theWordNoDollar = theWord.Mid(1);
-        }
+        if(theWord.StartsWith("$")) { theWordNoDollar = theWord.Mid(1); }
         PHPExpression expr2(unsavedBuffer, "<?php $this->" + theWordNoDollar, forFunctionCalltip);
         resolved = expr2.Resolve(m_lookupTable, editor->GetFileName().GetFullPath());
         filter = expr2.GetFilter();
@@ -568,9 +552,7 @@ PHPEntityBase::Ptr_t PHPCodeCompletion::DoGetPHPEntryUnderTheAtPos(IEditor* edit
             // Fallback to functions and constants
             PHPEntityBase::List_t children =
                 m_lookupTable.FindGlobalFunctionAndConsts(PHPLookupTable::kLookupFlags_ExactMatch, filter);
-            if(children.size() == 1) {
-                resolved = *children.begin();
-            }
+            if(children.size() == 1) { resolved = *children.begin(); }
         }
         if(resolved && resolved->Is(kEntityTypeFunction)) {
             // for a function, we need to load its children (function arguments)
@@ -588,6 +570,7 @@ void PHPCodeCompletion::Open(const wxFileName& workspaceFile)
 {
     Close();
     m_lookupTable.Open(workspaceFile.GetPath());
+    m_lookupTable.RebuildClassCache();
 
     // Cache the symbols into the OS caching, this is done by simply reading the entire file content and
     // then closing it
@@ -598,9 +581,7 @@ void PHPCodeCompletion::Open(const wxFileName& workspaceFile)
 
 void PHPCodeCompletion::Close()
 {
-    if(m_lookupTable.IsOpened()) {
-        m_lookupTable.Close();
-    }
+    if(m_lookupTable.IsOpened()) { m_lookupTable.Close(); }
 }
 
 void PHPCodeCompletion::OnInsertDoxyBlock(clCodeCompletionEvent& e)
@@ -621,7 +602,7 @@ void PHPCodeCompletion::OnInsertDoxyBlock(clCodeCompletionEvent& e)
     // until the end of file
     wxString unsavedBuffer = editor->GetTextRange(editor->GetCurrentPosition(), editor->GetLength());
     unsavedBuffer.Trim().Trim(false);
-    PHPSourceFile source("<?php " + unsavedBuffer);
+    PHPSourceFile source("<?php " + unsavedBuffer, &m_lookupTable);
     source.SetParseFunctionBody(false);
     source.Parse();
 
@@ -631,7 +612,7 @@ void PHPCodeCompletion::OnInsertDoxyBlock(clCodeCompletionEvent& e)
         for(PHPEntityBase::List_t::const_iterator iter = children.begin(); iter != children.end(); ++iter) {
             PHPEntityBase::Ptr_t match = *iter;
             if(match->GetLine() == 0 && match->Is(kEntityTypeFunction)) {
-                e.Skip(false);  // notify codelite to stop processing this event
+                e.Skip(false); // notify codelite to stop processing this event
 
                 CommentConfigData data;
                 EditorConfigST::Get()->ReadObject(wxT("CommentConfigData"), &data);
@@ -644,15 +625,9 @@ void PHPCodeCompletion::OnInsertDoxyBlock(clCodeCompletionEvent& e)
     }
 }
 
-void PHPCodeCompletion::OnSymbolsCached()
-{
-    wxLogMessage("PHP Symbols cached into OS cache");
-}
+void PHPCodeCompletion::OnSymbolsCached() { clLogMessage("PHP Symbols cached into OS cache"); }
 
-void PHPCodeCompletion::OnSymbolsCacheError()
-{
-    wxLogMessage("Error encountered while caching PHP symbols");
-}
+void PHPCodeCompletion::OnSymbolsCacheError() { clLogMessage("Error encountered while caching PHP symbols"); }
 
 void PHPCodeCompletion::OnQuickJump(clCodeCompletionEvent& e)
 {
@@ -685,23 +660,19 @@ void PHPCodeCompletion::DoSelectInEditor(IEditor* editor, const wxString& what, 
 {
     if(editor) {
         editor->GetCtrl()->ClearSelections();
-        if(!editor->FindAndSelect(what, what, from, NULL)) {
-            editor->SetCaretAt(from);
-        }
+        if(!editor->FindAndSelect(what, what, from, NULL)) { editor->SetCaretAt(from); }
     }
 }
 
 wxString PHPCodeCompletion::ExpandRequire(const wxFileName& curfile, const wxString& require)
 {
     PHPScanner_t scanner = ::phpLexerNew("<?php " + require);
-    if(!scanner)
-        return "";
+    if(!scanner) return "";
 
     wxString outFile;
     phpLexerToken token;
     while(::phpLexerNext(scanner, token)) {
-        if(token.IsAnyComment())
-            continue;
+        if(token.IsAnyComment()) continue;
         switch(token.type) {
         case kPHP_T_REQUIRE:
         case kPHP_T_REQUIRE_ONCE:
@@ -758,15 +729,12 @@ int PHPCodeCompletion::GetLocationForSettersGetters(const wxString& filecontent,
 {
     PHPScannerLocker locker(filecontent);
     PHPScanner_t scanner = locker.scanner;
-    if(!scanner)
-        return wxNOT_FOUND;
+    if(!scanner) return wxNOT_FOUND;
 
     phpLexerToken token;
     bool isOK = false;
     while(::phpLexerNext(scanner, token)) {
-        if(token.type != kPHP_T_CLASS) {
-            continue;
-        }
+        if(token.type != kPHP_T_CLASS) { continue; }
 
         if(::phpLexerNext(scanner, token) && token.type == kPHP_T_IDENTIFIER && token.Text() == classname) {
             // we found the class definition
@@ -775,8 +743,7 @@ int PHPCodeCompletion::GetLocationForSettersGetters(const wxString& filecontent,
         }
     }
 
-    if(!isOK)
-        return wxNOT_FOUND;
+    if(!isOK) return wxNOT_FOUND;
 
     int depth = 0;
     int line = wxNOT_FOUND;
@@ -789,32 +756,26 @@ int PHPCodeCompletion::GetLocationForSettersGetters(const wxString& filecontent,
         }
     }
 
-    if(!depth)
-        return wxNOT_FOUND;
+    if(!depth) return wxNOT_FOUND;
     // Now search for the closing brace
     while(::phpLexerNext(scanner, token)) {
         if(token.type == '}') {
             line = token.lineNumber;
             --depth;
-            if(depth == 0) {
-                break;
-            }
+            if(depth == 0) { break; }
         } else if(token.type == '{') {
             ++depth;
         }
     }
 
-    if(depth == 0) {
-        return line;
-    }
+    if(depth == 0) { return line; }
     return wxNOT_FOUND;
 }
 
 PHPEntityBase::List_t PHPCodeCompletion::PhpKeywords(const wxString& prefix) const
 {
     LexerConf::Ptr_t lexer = ColoursAndFontsManager::Get().GetLexer("php");
-    if(!lexer)
-        return PHPEntityBase::List_t();
+    if(!lexer) return PHPEntityBase::List_t();
     wxString lcPrefix = prefix.Lower();
     PHPEntityBase::List_t lst;
     wxString phpKeywords = lexer->GetKeyWords(4);
@@ -835,36 +796,31 @@ void PHPCodeCompletion::GetMembers(IEditor* editor, PHPEntityBase::List_t& membe
 {
     members.clear();
     scope.clear();
-    if(!editor) {
-        return;
-    }
+    if(!editor) { return; }
 
     // Parse until the current position to get the current scope name
     {
         wxString text = editor->GetTextRange(0, editor->GetCurrentPosition());
-        PHPSourceFile sourceFile(text);
+        PHPSourceFile sourceFile(text, &m_lookupTable);
         sourceFile.SetParseFunctionBody(true);
         sourceFile.SetFilename(editor->GetFileName());
         sourceFile.Parse();
 
         const PHPEntityClass* scopeAtPoint = sourceFile.Class()->Cast<PHPEntityClass>();
-        if(!scopeAtPoint) {
-            return;
-        }
+        if(!scopeAtPoint) { return; }
         scope = scopeAtPoint->GetFullName();
     }
 
     // Second parse: parse the entire buffer so we are not limited by the caret position
     wxString text = editor->GetTextRange(0, editor->GetLength());
-    PHPSourceFile sourceFile(text);
+    PHPSourceFile sourceFile(text, &m_lookupTable);
     sourceFile.SetParseFunctionBody(true);
     sourceFile.SetFilename(editor->GetFileName());
     sourceFile.Parse();
 
     // Locate the scope
     PHPEntityBase::Ptr_t parentClass = sourceFile.Namespace()->FindChild(scope);
-    if(!parentClass)
-        return;
+    if(!parentClass) return;
 
     // filter out
     const PHPEntityBase::List_t& children = parentClass->GetChildren();
@@ -889,4 +845,82 @@ void PHPCodeCompletion::DoOpenEditorForEntry(PHPEntityBase::Ptr_t entry)
         int selectFromPos = editor->GetCtrl()->PositionFromLine(entry->GetLine());
         DoSelectInEditor(editor, entry->GetShortName(), selectFromPos);
     }
+}
+
+void PHPCodeCompletion::OnParseEnded(clParseEvent& event)
+{
+    event.Skip();
+    m_lookupTable.RebuildClassCache();
+}
+
+void PHPCodeCompletion::OnUpdateNavigationBar(clCodeCompletionEvent& e)
+{
+    e.Skip();
+    if(!clGetManager()->GetNavigationBar()->IsShown()) return;
+    IEditor* active_editor = clGetManager()->GetActiveEditor();
+    IEditor* editor = dynamic_cast<IEditor*>(e.GetEditor());
+    if(!editor || !active_editor || editor != active_editor) return;
+    if(FileExtManager::GetTypeFromExtension(editor->GetFileName()) != FileExtManager::TypePhp) return;
+
+    e.Skip(false);
+
+    // Fetch the function closest to the current file
+    PHPEntityBase::Ptr_t func = m_lookupTable.FindFunctionNearLine(editor->GetFileName(), e.GetLineNumber());
+    if(!func) {
+        clGetManager()->GetNavigationBar()->SetMessage("", "");
+        return;
+    }
+    wxString className, functionName;
+    functionName = func->GetShortName();
+
+    wxString fullname = func->GetFullName();
+    int where = fullname.rfind(functionName);
+    if(where != wxNOT_FOUND) {
+        fullname.RemoveLast(functionName.size());
+        if(fullname.EndsWith("\\")) { fullname.RemoveLast(); }
+        className.swap(fullname);
+    }
+    clGetManager()->GetNavigationBar()->SetMessage(className, functionName);
+}
+
+void PHPCodeCompletion::OnNavigationBarMenuSelectionMade(clCommandEvent& e)
+{
+    e.Skip();
+    IEditor* editor = clGetManager()->GetActiveEditor();
+    if(!editor || FileExtManager::GetTypeFromExtension(editor->GetFileName()) != FileExtManager::TypePhp) {
+        m_currentNavBarFunctions.clear();
+        return;
+    }
+
+    const wxString& key = e.GetString();
+    if(m_currentNavBarFunctions.count(key) == 0) {
+        m_currentNavBarFunctions.clear();
+        return;
+    }
+
+    e.Skip(false); // ours to handle
+    PHPEntityBase::Ptr_t func = m_currentNavBarFunctions[key];
+    editor->FindAndSelect(func->GetShortName(), func->GetShortName(), editor->PosFromLine(func->GetLine() - 1),
+                          nullptr);
+    m_currentNavBarFunctions.clear();
+}
+
+void PHPCodeCompletion::OnNavigationBarMenuShowing(clContextMenuEvent& e)
+{
+    e.Skip();
+    IEditor* editor = clGetManager()->GetActiveEditor();
+    if(!editor || FileExtManager::GetTypeFromExtension(editor->GetFileName()) != FileExtManager::TypePhp) return;
+
+    // Ours to handle, call Skip(false)
+    e.Skip(false);
+    m_currentNavBarFunctions.clear();
+    PHPEntityBase::List_t functions;
+    if(m_lookupTable.FindFunctionsByFile(editor->GetFileName(), functions) == 0) { return; }
+
+    wxMenu* menu = e.GetMenu();
+    std::for_each(functions.begin(), functions.end(), [&](PHPEntityBase::Ptr_t func) {
+        PHPEntityFunction* pFunc = func->Cast<PHPEntityFunction>();
+        menu->Append(wxID_ANY, pFunc->GetFullPath());
+        m_currentNavBarFunctions[pFunc->GetFullPath()] = func;
+    });
 }

@@ -27,6 +27,9 @@
 #include <wx/filename.h>
 #include "cl_standard_paths.h"
 #include <wx/ffile.h>
+#include "cl_standard_paths.h"
+#include <wx/utils.h>
+#include "globals.h"
 
 #ifdef __WXMAC__
 static const wxString s_DefaultTypes = "type summary add wxString --summary-string \"${var.m_impl}\"\n"
@@ -48,6 +51,31 @@ LLDBSettings::LLDBSettings()
     , m_proxyPort(13610)
 {
     m_types = s_DefaultTypes;
+    wxFileName exePath;
+#ifdef __WXGTK__
+    // Default path to lldb-server
+    wxString path;
+    ::wxGetEnv("PATH", &path);
+    wxArrayString lldbServerOptions;
+    lldbServerOptions.Add("lldb-server"); // no version suffix
+    for(size_t major = 3; major < 8; ++major) {
+        for(size_t minor = 0; minor < 10; ++minor) {
+            lldbServerOptions.Add(wxString() << "lldb-server-" << major << "." << minor);
+        }
+    }
+    for(size_t i = 0; i < lldbServerOptions.size(); ++i) {
+        if(::clFindExecutable(lldbServerOptions.Item(i), exePath)) {
+            break;
+        }
+    }
+
+#elif defined(__WXOSX__)
+    exePath = wxFileName(clStandardPaths::Get().GetBinaryFullPath("debugserver"));
+#endif
+
+    if(exePath.IsOk() && exePath.FileExists()) {
+        m_debugserver = exePath.GetFullPath();
+    }
 }
 
 LLDBSettings::~LLDBSettings() {}
@@ -78,7 +106,7 @@ void LLDBSettings::SavePerspective(const wxString& perspective)
     }
 }
 
-void LLDBSettings::FromJSON(const JSONElement& json)
+void LLDBSettings::FromJSON(const JSONItem& json)
 {
     m_arrItems = json.namedObject("m_maxArrayElements").toSize_t(m_arrItems);
     m_stackFrames = json.namedObject("m_maxCallstackFrames").toSize_t(m_stackFrames);
@@ -88,11 +116,12 @@ void LLDBSettings::FromJSON(const JSONElement& json)
     m_proxyIp = json.namedObject("m_proxyIp").toString("127.0.0.1");
     m_lastLocalFolder = json.namedObject("m_lastLocalFolder").toString();
     m_lastRemoteFolder = json.namedObject("m_lastRemoteFolder").toString();
+    m_debugserver = json.namedObject("m_debugserver").toString(m_debugserver);
 }
 
-JSONElement LLDBSettings::ToJSON() const
+JSONItem LLDBSettings::ToJSON() const
 {
-    JSONElement json = JSONElement::createObject();
+    JSONItem json = JSONItem::createObject();
     json.addProperty("m_maxArrayElements", m_arrItems);
     json.addProperty("m_maxCallstackFrames", m_stackFrames);
     json.addProperty("m_flags", m_flags);
@@ -101,6 +130,7 @@ JSONElement LLDBSettings::ToJSON() const
     json.addProperty("m_proxyIp", m_proxyIp);
     json.addProperty("m_lastLocalFolder", m_lastLocalFolder);
     json.addProperty("m_lastRemoteFolder", m_lastRemoteFolder);
+    json.addProperty("m_debugserver", m_debugserver);
     return json;
 }
 
@@ -115,7 +145,7 @@ LLDBSettings& LLDBSettings::Load()
             wxString content;
             fp.ReadAll(&content, wxConvUTF8);
 
-            JSONRoot root(content);
+            JSON root(content);
             FromJSON(root.toElement());
             fp.Close();
         }

@@ -1,16 +1,16 @@
-#include "php_project.h"
-#include <macros.h>
-#include "php_workspace.h"
-#include <wx/tokenzr.h>
-#include <wx/busyinfo.h>
-#include <wx/utils.h>
-#include <event_notifier.h>
-#include <cl_command_event.h>
-#include <plugin.h>
-#include <macros.h>
-#include <wx/msgdlg.h>
 #include "FilesCollector.h"
 #include "file_logger.h"
+#include "php_project.h"
+#include "php_workspace.h"
+#include <cl_command_event.h>
+#include <event_notifier.h>
+#include <macros.h>
+#include <plugin.h>
+#include <wx/busyinfo.h>
+#include <wx/msgdlg.h>
+#include <wx/tokenzr.h>
+#include <wx/utils.h>
+#include "clFileSystemEvent.h"
 
 wxDEFINE_EVENT(wxEVT_PHP_PROJECT_FILES_SYNC_START, clCommandEvent);
 wxDEFINE_EVENT(wxEVT_PHP_PROJECT_FILES_SYNC_END, clCommandEvent);
@@ -50,20 +50,13 @@ public:
         }
 
         // Scan and collect the files
-        wxArrayString files;
-        FilesCollector traverser(m_projectData.includes, m_projectData.excludes, NULL);
-        wxDir dir(m_projectData.directory);
-        dir.Traverse(traverser);
-        files.swap(traverser.GetFilesAndFolders());
-        files.Sort();
+        clCommandEvent event(wxEVT_PHP_PROJECT_FILES_SYNC_END);
+        FilesCollector collector(event.GetStrings(), m_projectData.includes, m_projectData.excludes, NULL);
+        collector.Collect(m_projectData.directory);
 
         // Notify about sync completed
-        {
-            clCommandEvent event(wxEVT_PHP_PROJECT_FILES_SYNC_END);
-            event.SetString(m_projectData.projectName);
-            event.SetStrings(files);
-            m_owner->AddPendingEvent(event);
-        }
+        event.SetString(m_projectData.projectName);
+        m_owner->AddPendingEvent(event);
 
         clDEBUG() << "Scanning files for project:" << m_projectData.projectName << "... is completed" << clEndl;
         return NULL;
@@ -80,7 +73,7 @@ PHPProject::PHPProject()
     : m_isActive(false)
     , m_importFileSpec(
           "*.php;*.php5;*.inc;*.phtml;*.js;*.html;*.css;*.scss;*.less;*.json;*.xml;*.ini;*.md;*.txt;*.text;."
-          "htaccess;*.ctp")
+          "htaccess;*.ctp;*.sql")
     , m_excludeFolders(".git;.svn;.codelite;.clang")
 {
     Bind(wxEVT_PHP_PROJECT_FILES_SYNC_START, &PHPProject::OnFileScanStart, this);
@@ -93,7 +86,7 @@ PHPProject::~PHPProject()
     Unbind(wxEVT_PHP_PROJECT_FILES_SYNC_END, &PHPProject::OnFileScanEnd, this);
 }
 
-void PHPProject::FromJSON(const JSONElement& element)
+void PHPProject::FromJSON(const JSONItem& element)
 {
     m_importFileSpec = element.namedObject("m_importFileSpec").toString(m_importFileSpec);
     m_excludeFolders = element.namedObject("m_excludeFolders").toString(m_excludeFolders);
@@ -102,7 +95,7 @@ void PHPProject::FromJSON(const JSONElement& element)
     m_settings.FromJSON(element.namedObject("settings"));
 }
 
-void PHPProject::ToJSON(JSONElement& pro) const
+void PHPProject::ToJSON(JSONItem& pro) const
 {
     pro.addProperty("m_name", m_name);
     pro.addProperty("m_isActive", m_isActive);
@@ -113,36 +106,14 @@ void PHPProject::ToJSON(JSONElement& pro) const
 
 wxArrayString& PHPProject::GetFiles(wxProgressDialog* progress)
 {
-#if 0
-    if(m_files.IsEmpty()) {
-        FilesCollector traverser(m_importFileSpec, m_excludeFolders, progress);
-        wxDir dir(GetFilename().GetPath());
-        dir.Traverse(traverser);
-        m_files.swap(traverser.GetFilesAndFolders());
-        m_files.Sort();
-    }
-#endif
     wxUnusedVar(progress);
     return m_files;
 }
 
 void PHPProject::GetFilesArray(wxArrayString& files) const
 {
-#if 1
+    files.Alloc(m_files.size());
     files.insert(files.end(), m_files.begin(), m_files.end());
-#else
-    if(!m_files.IsEmpty()) {
-        files.insert(files.end(), m_files.begin(), m_files.end());
-        return;
-    }
-
-    FilesCollector traverser(m_importFileSpec, m_excludeFolders, NULL);
-    wxDir dir(GetFilename().GetPath());
-    dir.Traverse(traverser);
-    wxArrayString& collectedFiles = traverser.GetFilesAndFolders();
-    files.insert(files.end(), collectedFiles.begin(), collectedFiles.end());
-    files.Sort();
-#endif
 }
 
 void PHPProject::Create(const wxFileName& filename, const wxString& name)
@@ -155,14 +126,14 @@ void PHPProject::Create(const wxFileName& filename, const wxString& name)
 void PHPProject::Load(const wxFileName& filename)
 {
     m_filename = filename;
-    JSONRoot root(m_filename);
+    JSON root(m_filename);
     FromJSON(root.toElement());
 }
 
 void PHPProject::Save()
 {
-    JSONRoot root(cJSON_Object);
-    JSONElement pro = root.toElement();
+    JSON root(cJSON_Object);
+    JSONItem pro = root.toElement();
     ToJSON(pro);
     root.save(m_filename);
 }
@@ -175,6 +146,9 @@ void PHPProject::FolderDeleted(const wxString& name, bool notify)
 
     wxArrayString updatedArray;
     wxArrayString deletedFiles;
+
+    updatedArray.Alloc(m_files.size());
+    deletedFiles.Alloc(m_files.size());
     for(size_t i = 0; i < m_files.GetCount(); ++i) {
         if(!m_files.Item(i).StartsWith(name)) {
             updatedArray.Add(m_files.Item(i));
@@ -182,6 +156,10 @@ void PHPProject::FolderDeleted(const wxString& name, bool notify)
             deletedFiles.Add(m_files.Item(i));
         }
     }
+
+    // Free extra memory
+    updatedArray.Shrink();
+    deletedFiles.Shrink();
 
     // Update the list
     m_files.swap(updatedArray);
@@ -196,11 +174,9 @@ void PHPProject::FolderDeleted(const wxString& name, bool notify)
 void PHPProject::FileRenamed(const wxString& oldname, const wxString& newname, bool notify)
 {
     int where = m_files.Index(oldname);
-    if(where != wxNOT_FOUND) {
-        m_files.Item(where) = newname;
-    }
+    if(where != wxNOT_FOUND) { m_files.Item(where) = newname; }
 
-    if(notify && where != wxNOT_FOUND) {
+    if(notify && (where != wxNOT_FOUND)) {
         {
             wxArrayString arr;
             arr.Add(oldname);
@@ -215,6 +191,12 @@ void PHPProject::FileRenamed(const wxString& oldname, const wxString& newname, b
             event.SetStrings(arr);
             EventNotifier::Get()->AddPendingEvent(event);
         }
+
+        // And finally notify about rename-event
+        clFileSystemEvent renameEvent(wxEVT_FILE_RENAMED);
+        renameEvent.SetPath(oldname);
+        renameEvent.SetNewpath(newname);
+        EventNotifier::Get()->AddPendingEvent(renameEvent);
     }
 }
 
@@ -232,9 +214,7 @@ void PHPProject::FilesDeleted(const wxArrayString& files, bool notify)
     // Normalize the folder name by using wxFileName
     for(size_t i = 0; i < files.GetCount(); ++i) {
         int where = m_files.Index(files.Item(i));
-        if(where != wxNOT_FOUND) {
-            m_files.RemoveAt(where);
-        }
+        if(where != wxNOT_FOUND) { m_files.RemoveAt(where); }
     }
 
     if(notify) {

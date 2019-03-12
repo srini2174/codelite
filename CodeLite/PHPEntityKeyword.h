@@ -27,7 +27,6 @@
 #define PHPENTITYKEYWORD_H
 
 #include "PHPEntityBase.h"
-#include "PHPEntityBase.h" // Base class: PHPEntityBase
 #include <wx/string.h>
 
 class WXDLLIMPEXP_CL PHPEntityKeyword : public PHPEntityBase
@@ -35,14 +34,16 @@ class WXDLLIMPEXP_CL PHPEntityKeyword : public PHPEntityBase
 public:
     PHPEntityKeyword();
     virtual ~PHPEntityKeyword();
-
+    void FromJSON(const JSONItem& json);
+    JSONItem ToJSON() const;
+    
 public:
     virtual wxString FormatPhpDoc(const CommentConfigData& data) const;
     virtual void FromResultSet(wxSQLite3ResultSet& res);
     virtual wxString GetDisplayName() const;
     virtual bool Is(eEntityType type) const;
     virtual void PrintStdout(int indent) const;
-    virtual void Store(wxSQLite3Database& db);
+    virtual void Store(PHPLookupTable* lookup);
     virtual wxString Type() const;
 };
 

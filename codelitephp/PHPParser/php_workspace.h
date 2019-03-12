@@ -30,13 +30,12 @@
 #include <vector>
 #include <set>
 #include "phpexecutor.h"
-#include <json_node.h>
+#include "JSON.h"
 #include <wx/filename.h>
 #include "PHPWrokspaceStorageInterface.h"
 #include <macros.h>
 #include "php_project_settings_data.h"
 #include "php_project.h"
-#include "php_folder.h"
 #include <wx/event.h>
 #include "XDebugBreakpoint.h"
 #include "imanager.h"
@@ -82,8 +81,8 @@ public:
     static PHPWorkspace* Get();
     static void Release();
     void SetPluginManager(IManager* manager) { this->m_manager = manager; }
-    JSONElement ToJSON(JSONElement& e) const;
-    void FromJSON(const JSONElement& e);
+    JSONItem ToJSON(JSONItem& e) const;
+    void FromJSON(const JSONItem& e);
 
 public:
     PHPWorkspace();
@@ -233,9 +232,7 @@ public:
     ////////////////////////////////////////////
     // Project execution
     ////////////////////////////////////////////
-    bool RunProject(bool debugging,
-                    const wxString& urlOrFilePath,
-                    const wxString& projectName = wxEmptyString,
+    bool RunProject(bool debugging, const wxString& urlOrFilePath, const wxString& projectName = wxEmptyString,
                     const wxString& xdebugSessionName = wxEmptyString);
     bool IsProjectRunning() const { return m_executor.IsRunning(); }
     void StopExecutedProgram() { m_executor.Stop(); }

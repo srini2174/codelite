@@ -26,10 +26,13 @@
 #ifndef CLFILEVIWERTREECTRL_H
 #define CLFILEVIWERTREECTRL_H
 
-#include <wx/treectrl.h>
+#include "clTreeCtrl.h"
 #include "codelite_exports.h"
-#include <wx/filename.h>
+#include "wxStringHash.h"
 #include <map>
+#include <wx/filename.h>
+#include <wx/treectrl.h>
+#include "clThemedTreeCtrl.h"
 
 /**
  * @class clTreeNodeIndex
@@ -37,7 +40,7 @@
  */
 class WXDLLIMPEXP_SDK clTreeNodeIndex
 {
-    std::map<wxString, wxTreeItemId> m_children;
+    std::unordered_map<wxString, wxTreeItemId> m_children;
 
 public:
     clTreeNodeIndex() {}
@@ -52,6 +55,10 @@ public:
     }
     void Add(const wxString& path, const wxTreeItemId& item) { m_children.insert(std::make_pair(path, item)); }
     void Delete(const wxString& name) { m_children.erase(name); }
+    /**
+     * @brief clear the index content
+     */
+    void Clear() { m_children.clear(); }
 };
 
 // Item data class
@@ -124,21 +131,13 @@ public:
     bool IsDummy() const { return m_kind == kDummy; }
 };
 
-class WXDLLIMPEXP_SDK clFileViewerTreeCtrl : public wxTreeCtrl
+class WXDLLIMPEXP_SDK clFileViewerTreeCtrl : public clThemedTreeCtrl
 {
-    wxDECLARE_DYNAMIC_CLASS(clFileViewerTreeCtrl);
-
 public:
-    clFileViewerTreeCtrl();
-    clFileViewerTreeCtrl(wxWindow* parent,
-                         wxWindowID id = wxID_ANY,
-                         const wxPoint& pos = wxDefaultPosition,
+    clFileViewerTreeCtrl(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition,
                          const wxSize& size = wxDefaultSize,
                          long style = wxTR_DEFAULT_STYLE | wxTR_MULTIPLE | wxTR_HIDE_ROOT | wxBORDER_STATIC);
     virtual ~clFileViewerTreeCtrl();
-
-    virtual int OnCompareItems(const clTreeCtrlData* a, const clTreeCtrlData* b);
-    virtual int OnCompareItems(const wxTreeItemId& item1, const wxTreeItemId& item2);
 };
 
 #endif // CLFILEVIWERTREECTRL_H
